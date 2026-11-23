@@ -6,10 +6,10 @@
 
 An illustrated one-page world news atlas summing up **Monday 23 November 2026** in a single `1024×1024` 8-bit RGB PNG for the [make.fun `news-image-20261123`](https://make.fun/bounty/news-image-20261123) competition.
 
-## Coverage (7 Regions · 15 Stories · 13 Beats)
+## Coverage (7 Regions · 18 Stories · 14 Beats)
 
-- **Hero Lead 1 (`Global · Markets`):** AI tech rout hits Asia; China hits 16-month low, Taiwan widens short-selling curbs, and South Korea readies an $8B stabilization fund.
-- **Hero Lead 2 (`Middle East · Oil`):** Iran vows to use all available tools against the U.S. naval oil blockade as Washington warns blockade-running tankers.
+- **Hero Lead 1 (`Global · Markets`):** AI tech rout hits Asia; China hits 16-month low, Taiwan widens short-selling curbs, and South Korea readies an $8B rescue fund.
+- **Hero Lead 2 (`Middle East · Oil`):** Iran vows to use all available tools against the U.S. naval oil blockade as Washington warns blockade-running ships.
 - **3×3 Illustrated Gallery:**
   1. `Europe · Energy` — European natural gas jumps 6% to €93/MWh on a cold-snap forecast.
   2. `Africa · Oil` — Valve closure on Libya's Sharara pipeline cuts 350,000 bpd of output.
@@ -18,13 +18,13 @@ An illustrated one-page world news atlas summing up **Monday 23 November 2026** 
   5. `South America · Space` — Ariane 6 Flight VA271 launch halted at Kourou spaceport in French Guiana.
   6. `Oceania · Economy` — Australian Treasurer Jim Chalmers forecasts slower growth (<2%) with no recession.
   7. `Africa · Health` — The 5th Africa Public Health Conference (CPHIA 2026) opens in Addis Ababa.
-  8. `Europe · Media` — Independent report warns the BBC licence fee faces a steep decline.
-  9. `South Asia · Diplomacy` — India and Nepal sign cross-border hydropower and connectivity agreements.
-- **World Wire Strip (`2×2`):**
-  - `Gulf · Oil` — Saudi Arabia and Japan expand joint crude storage by 16M barrels.
-  - `Europe · Civic` — Cost-of-living protests sweep European cities.
-  - `Sport · NZ` — New Zealand holds India to a Day 5 Wellington Test draw.
-  - `Science · UK` — Bournemouth University study suggests Iron Age ruler Verica was likely female.
+  8. `Europe · Media` — Independent report warns the BBC licence fee faces a steep decline (<50% of households within a decade).
+  9. `South Asia · Diplomacy` — India and Nepal sign cross-border hydropower and connectivity pacts.
+- **World Wire Strip (`2×2`, 7 Additional Stories):**
+  - `Aid` — Oxfam/CEOBS warn Gaza faces severe toxic contamination · Save the Children warns malaria surged 46% in earthquake-hit Chocó, Colombia.
+  - `Trade` — Saudi Arabia & Japan expand joint crude storage by 16M barrels · South Africa & Zambia link live AfCFTA border customs.
+  - `World` — Cost-of-living protests hit European cities · Egypt & Iraq leaders hold Cairo talks.
+  - `Sport` — New Zealand holds India to a Day 5 Wellington Test draw.
 
 ## Running
 
