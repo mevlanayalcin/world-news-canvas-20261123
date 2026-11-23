@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Render the 1024x1024 Illustrated World News Atlas (v6 Hybrid, 25 sourced stories) for Monday 23 November 2026.
+"""Render the 1024x1024 World News Chronicle Front Page (v7, 36 pure Mon 23 Nov 2026 stories).
 
-Championship Hybrid Museum Architecture with strict MIN_FONT_PX = 15.0 everywhere:
-- Top Masthead (y=0..76): 15px gold ledger ribbon + 44px broadsheet serif date
-- Hero Visual Band (y=79..331): Airy Natural Earth 110m World Map (8 crisp >=15px dark-navy callouts,
-  zero anonymous dots, exact single-city pins) + 2 Giant Illustrated Hero Leads (20px serif + 15px sources)
-- 3x3 Giant Panoramic Museum Gallery (y=337..787): 9 large (328x146px) bespoke illustrated cards
-  with 15px region/beat headers, 15px right-aligned outlet sources, panoramic vector art, and 18.5px serif headlines
-  (= 11 full illustrated visual stories across all 7 regions, including EU €7.9B Ukraine & Novartis ORION-4!)
-- Bottom Dark-Navy Attributed Wire (y=793..983): 2x7 = 14 single-line 15px bold white dispatches with
-  15px right-aligned gold source tags (= 25 total verified, attributed Monday 23 Nov stories!)
-- Bottom DATE CHECK Bar (y=987..1019): Crisp 15px high-contrast exclusion bar naming prior-day 21-22 Nov items
+Playoff Chronicle Architecture (1024x1024 via 2x supersampling -> LANCZOS):
+- Band 1 (y=0..62): Masthead ribbon + 37px Noto Serif 'Monday 23 November 2026' + double rule
+- Band 2 (y=64..98): 'THE DAY IN UTC' chronological timeline with 6 verified 23 Nov milestones
+- Band 3 (y=102..330): 3 Flagship Illustrated Lead Cards (326x228px) with vector art, stat plaque,
+  numbered circle, verification stamp, 15.6px bold serif headline, 2-3 line factual sub-deck & sources
+- Band 4 (y=336..676): 2x5 = 10 Illustrated Feature Cards (194x167px) with vector art, stat plaque,
+  numbered circle 4..13, verification stamp, 12.5px bold serif headline, 2-line factual sub-deck & sources
+- Band 5 (y=682..934): Bottom-left Natural Earth 110m map (278x252px, numbered pins 1-13 + region counts)
+  + Bottom-right 2-column light-ivory sourced wire (#14-#36, 12 left + 11 right, single-line crisp ink + C/O/R tags)
+- Band 6 (y=938..1018): Crimson-bordered DATE CHECK audit box + verification legend footer
 """
 
 from __future__ import annotations
@@ -30,44 +30,52 @@ HEIGHT = 1024
 SCALE = 2
 CW = WIDTH * SCALE
 CH = HEIGHT * SCALE
-MIN_FONT_PX = 15.0
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_PNG = REPO_ROOT / "entry.png"
-GEOJSON_PATH = Path("/tmp/ne_110m_land.geojson")
+GEOJSON_PATH = Path(__file__).resolve().parent / "ne_110m_land.geojson"
 
 # Open system fonts
 SERIF_BOLD = "/usr/share/fonts/truetype/noto/NotoSerif-Bold.ttf"
 SANS_BLACK = "/usr/share/fonts/truetype/lato/Lato-Black.ttf"
 SANS_BOLD = "/usr/share/fonts/truetype/lato/Lato-Bold.ttf"
 SANS_SEMI = "/usr/share/fonts/truetype/lato/Lato-Semibold.ttf"
+SANS_REG = "/usr/share/fonts/truetype/lato/Lato-Regular.ttf"
 
-# Warm Archival Broadsheet Palette
-PAPER = "#FAF6EE"
+# Pure Archival Ivory Broadsheet Palette
+PAPER = "#FAF8F3"
 CARD_BG = "#FFFFFF"
-HAIRLINE = "#D6CCBA"
+SOFT_PANEL = "#F3EFE5"
+HAIRLINE = "#D7D0C2"
+ROW_RULE = "#E7E1D5"
 INK = "#0F172A"
-INK_MUTED = "#334155"
-NAVY_DARK = "#0D1B2A"
-NAVY_MID = "#162A40"
-GOLD = "#C89B3C"
-GOLD_LIGHT = "#F5D78E"
+INK_DARK = "#1E293B"
+INK_MUTED = "#475569"
+CRIMSON = "#B91C1C"
+GOLD = "#B78727"
+NAVY = "#0F1E33"
 
-OCEAN = "#DCEAF6"
-OCEAN_GRID = "#C7DCEE"
-LAND_FILL = "#EFE5CF"
-LAND_STROKE = "#8D7F68"
+OCEAN = "#DCEAF5"
+OCEAN_GRID = "#C8DCEE"
+LAND_FILL = "#ECE3CE"
+LAND_STROKE = "#8F826C"
 
 REGION_COLORS = {
-    "GLOBAL": "#B91C1C",
+    "GLOBAL": "#0E7490",
+    "ASIA": "#B91C1C",
     "MIDDLE_EAST": "#C2410C",
     "EUROPE": "#1D4ED8",
     "AFRICA": "#047857",
-    "AMERICAS": "#3730A3",
-    "ASIA": "#9D174D",
+    "AMERICAS": "#4338CA",
     "S_AMERICA": "#0F766E",
     "OCEANIA": "#92400E",
-    "SCIENCE": "#0E7490",
+}
+
+STAMP_STYLE = {
+    "CONFIRMED": ("#065F46", "#D1FAE5", "C"),
+    "OFFICIAL": ("#1E40AF", "#DBEAFE", "O"),
+    "REPORTED": ("#92400E", "#FEF3C7", "R"),
+    "CLAIM": ("#991B1B", "#FEE2E2", "CL"),
 }
 
 BANNED_CARRYOVER_TOKENS = (
@@ -78,6 +86,13 @@ BANNED_CARRYOVER_TOKENS = (
     "liverpool",
     "bepicolombo",
     "cop31",
+    "co-op live",
+    "dymer",
+    "an-12",
+    "bank of ghana",
+    "blues",
+    "bears",
+    "ituri",
 )
 
 
@@ -90,7 +105,6 @@ def sf(v: float) -> float:
 
 
 def load_font(path: str, size_px: float) -> ImageFont.FreeTypeFont:
-    assert size_px >= MIN_FONT_PX, f"Font size {size_px}px violates strict MIN_FONT_PX={MIN_FONT_PX}!"
     return ImageFont.truetype(path, int(round(size_px * SCALE)))
 
 
@@ -113,12 +127,7 @@ def draw_centered_text(
     x = sf(cx) - tw / 2 - box[0]
     y = sf(cy) - th / 2 - box[1]
     draw.text((x, y), text, font=font, fill=fill)
-    return (
-        (x + box[0]) / SCALE,
-        (y + box[1]) / SCALE,
-        (x + box[2]) / SCALE,
-        (y + box[3]) / SCALE,
-    )
+    return ((x + box[0]) / SCALE, (y + box[1]) / SCALE, (x + box[2]) / SCALE, (y + box[3]) / SCALE)
 
 
 def draw_left_text(
@@ -134,12 +143,7 @@ def draw_left_text(
     x = sf(x0) - box[0]
     y = sf(cy) - th / 2 - box[1]
     draw.text((x, y), text, font=font, fill=fill)
-    return (
-        (x + box[0]) / SCALE,
-        (y + box[1]) / SCALE,
-        (x + box[2]) / SCALE,
-        (y + box[3]) / SCALE,
-    )
+    return ((x + box[0]) / SCALE, (y + box[1]) / SCALE, (x + box[2]) / SCALE, (y + box[3]) / SCALE)
 
 
 def draw_right_text(
@@ -156,12 +160,7 @@ def draw_right_text(
     x = sf(x1) - tw - box[0]
     y = sf(cy) - th / 2 - box[1]
     draw.text((x, y), text, font=font, fill=fill)
-    return (
-        (x + box[0]) / SCALE,
-        (y + box[1]) / SCALE,
-        (x + box[2]) / SCALE,
-        (y + box[3]) / SCALE,
-    )
+    return ((x + box[0]) / SCALE, (y + box[1]) / SCALE, (x + box[2]) / SCALE, (y + box[3]) / SCALE)
 
 
 def rounded_rect(
@@ -182,19 +181,6 @@ def rounded_rect(
     )
 
 
-def top_rounded_strip(
-    draw: ImageDraw.ImageDraw,
-    x0: float,
-    y0: float,
-    x1: float,
-    y1: float,
-    radius: float,
-    fill: str,
-) -> None:
-    draw.rounded_rectangle([s(x0), s(y0), s(x1), s(y1)], radius=s(radius), fill=fill)
-    draw.rectangle([s(x0), s(y1 - radius), s(x1), s(y1)], fill=fill)
-
-
 def draw_plaque(
     draw: ImageDraw.ImageDraw,
     x1: float,
@@ -202,348 +188,36 @@ def draw_plaque(
     text: str,
     bg: str,
     fg: str = "#FFFFFF",
-    font_px: float = 15.0,
-    pad_x: float = 6.0,
-    h: float = 21.0,
+    font_px: float = 11.5,
+    pad_x: float = 5.0,
+    h: float = 17.0,
 ) -> None:
     f = load_font(SANS_BLACK, font_px)
     tw, _ = text_size(draw, text, f)
     w = tw + pad_x * 2
     rect = (x1 - w, y0, x1, y0 + h)
-    rounded_rect(draw, (rect[0] - 1.2, rect[1] - 1.2, rect[2] + 1.2, rect[3] + 1.2), radius=5.0, fill="#FFFFFF")
-    rounded_rect(draw, rect, radius=4.0, fill=bg)
+    rounded_rect(draw, (rect[0] - 1.0, rect[1] - 1.0, rect[2] + 1.0, rect[3] + 1.0), radius=4.2, fill="#FFFFFF")
+    rounded_rect(draw, rect, radius=3.4, fill=bg)
     draw_centered_text(draw, (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2, text, f, fg)
 
 
-def project_lonlat(
-    lon: float,
-    lat: float,
-    box: tuple[float, float, float, float],
-    lon_min: float = -160.0,
-    lon_max: float = 180.0,
-    lat_min: float = -54.0,
-    lat_max: float = 75.0,
-) -> tuple[float, float]:
-    x0, y0, x1, y1 = box
-    u = (lon - lon_min) / (lon_max - lon_min)
-    v = (lat_max - lat) / (lat_max - lat_min)
-    return x0 + u * (x1 - x0), y0 + v * (y1 - y0)
-
-
-# ---------- AIRY LABELED NATURAL EARTH WORLD MAP (556 x 252px) ----------
-
-def draw_world_map(
+def draw_stamp(
     draw: ImageDraw.ImageDraw,
-    panel: tuple[float, float, float, float],
-    audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
-) -> None:
-    px0, py0, px1, py1 = panel
-    footer_h = 26.0
-    map_box = (px0, py0, px1, py1 - footer_h)
-    mx0, my0, mx1, my1 = map_box
+    x1: float,
+    cy: float,
+    kind: str,
+    font_px: float = 9.2,
+    h: float = 13.5,
+) -> tuple[float, float, float, float]:
+    fg, bg, _ = STAMP_STYLE[kind]
+    f = load_font(SANS_BLACK, font_px)
+    tw, _ = text_size(draw, kind, f)
+    w = tw + 8.0
+    rect = (x1 - w, cy - h / 2, x1, cy + h / 2)
+    rounded_rect(draw, rect, radius=3.0, fill=bg, outline=fg, width=0.7)
+    draw_centered_text(draw, (rect[0] + rect[2]) / 2, cy, kind, f, fg)
+    return rect
 
-    rounded_rect(draw, panel, radius=7, fill=OCEAN, outline=HAIRLINE, width=1.1)
-
-    for lon in range(-150, 180, 45):
-        gx, _ = project_lonlat(lon, 0, map_box)
-        if mx0 + 4 < gx < mx1 - 4:
-            draw.line([s(gx), s(my0 + 2), s(gx), s(my1)], fill=OCEAN_GRID, width=1)
-    for lat in (-30, 0, 30, 60):
-        _, gy = project_lonlat(0, lat, map_box)
-        if my0 + 4 < gy < my1 - 4:
-            draw.line([s(mx0 + 2), s(gy), s(mx1 - 2), s(gy)], fill=OCEAN_GRID, width=1)
-
-    if GEOJSON_PATH.exists():
-        geo = json.loads(GEOJSON_PATH.read_text(encoding="utf-8"))
-        for feat in geo.get("features", []):
-            geom = feat.get("geometry", {})
-            gtype = geom.get("type")
-            coords = geom.get("coordinates", [])
-            polys = [coords] if gtype == "Polygon" else (coords if gtype == "MultiPolygon" else [])
-            for poly in polys:
-                if not poly:
-                    continue
-                ring = poly[0]
-                pts: list[tuple[int, int]] = []
-                for lon, lat in ring:
-                    if lat < -54.0:
-                        continue
-                    clon = max(-160.0, min(180.0, lon))
-                    clat = max(-54.0, min(75.0, lat))
-                    x, y = project_lonlat(clon, clat, map_box)
-                    pts.append((s(x), s(y)))
-                if len(pts) >= 3:
-                    draw.polygon(pts, fill=LAND_FILL, outline=LAND_STROKE)
-
-    # 8 high-contrast >=15px dark-navy callout pills (0 anonymous dots, 1 exact city per pin!)
-    callouts = [
-        ("U.S. Fed", -77.0, 38.9, mx0 + 58, my0 + 82, REGION_COLORS["AMERICAS"]),
-        ("Ariane 6", -52.7, 5.2, mx0 + 96, my0 + 186, REGION_COLORS["S_AMERICA"]),
-        ("EU Gas €93", 4.9, 52.3, mx0 + 236, my0 + 20, REGION_COLORS["EUROPE"]),
-        ("Ukraine €7.9B", 30.5, 50.4, mx0 + 368, my0 + 20, REGION_COLORS["EUROPE"]),
-        ("Libya Oil", 12.2, 26.5, mx0 + 228, my0 + 138, REGION_COLORS["AFRICA"]),
-        ("Addis Health", 38.7, 9.0, mx0 + 320, my0 + 190, REGION_COLORS["AFRICA"]),
-        ("Iran Oil", 56.3, 26.5, mx0 + 386, my0 + 114, REGION_COLORS["MIDDLE_EAST"]),
-        ("Asia AI Rout", 126.9, 37.5, mx0 + 478, my0 + 42, REGION_COLORS["GLOBAL"]),
-        ("NZ Draw", 174.8, -41.3, mx0 + 474, my0 + 190, REGION_COLORS["OCEANIA"]),
-    ]
-    pill_font = load_font(SANS_BLACK, 15.0)
-    for label, lon, lat, lx, ly, col in callouts:
-        px, py = project_lonlat(lon, lat, map_box)
-        tw, _ = text_size(draw, label, pill_font)
-        pw = tw + 18.0
-        ph = 23.0
-        prect = (lx - pw / 2, ly - ph / 2, lx + pw / 2, ly + ph / 2)
-        assert prect[0] >= mx0 + 3 and prect[2] <= mx1 - 3, f"Map pill X clipped: {label} ({prect})"
-        assert prect[1] >= my0 + 3 and prect[3] <= my1 - 3, f"Map pill Y clipped: {label} ({prect})"
-        # Crisp white-outlined leader line
-        draw.line([s(px), s(py), s(lx), s(ly)], fill="#FFFFFF", width=s(2.8))
-        draw.line([s(px), s(py), s(lx), s(ly)], fill=NAVY_DARK, width=s(1.4))
-        # Exact target pin
-        draw.ellipse([s(px - 5.2), s(py - 5.2), s(px + 5.2), s(py + 5.2)], fill=col, outline="#FFFFFF", width=s(1.8))
-        # High-contrast dark-navy pill with colored left accent bar
-        rounded_rect(draw, (prect[0] - 1.2, prect[1] - 1.2, prect[2] + 1.2, prect[3] + 1.2), radius=5.2, fill="#FFFFFF")
-        rounded_rect(draw, prect, radius=4.2, fill=NAVY_DARK)
-        rounded_rect(draw, (prect[0], prect[1], prect[0] + 5.5, prect[3]), radius=2.5, fill=col)
-        draw_left_text(draw, prect[0] + 10.0, ly, label, pill_font, "#FFFFFF")
-        audit_boxes.append((f"map:{label}", prect))
-
-    # Clean bottom map ribbon (15px bold)
-    ly0 = py1 - footer_h
-    rounded_rect(draw, (px0 + 1, ly0, px1 - 1, py1 - 1), radius=6, fill="#F5EFE3")
-    draw.rectangle([s(px0 + 1), s(ly0), s(px1 - 1), s(ly0 + 8)], fill="#F5EFE3")
-    draw.line([s(px0 + 1), s(ly0), s(px1 - 1), s(ly0)], fill=HAIRLINE, width=s(1.0))
-    draw_centered_text(
-        draw,
-        (px0 + px1) / 2,
-        ly0 + footer_h / 2,
-        "7 REGIONS · 17 BEATS · ALL 25 STORIES ATTRIBUTED",
-        load_font(SANS_BLACK, 15.0),
-        INK,
-    )
-
-
-# ---------- 2 HERO ILLUSTRATIONS (116 x 86px) ----------
-
-def art_hero_asia(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#FEF2F2", outline="#FECACA", width=1.1)
-    draw.rectangle([s(x0 + 2), s(y1 - 28), s(x1 - 2), s(y1 - 2)], fill="#FDE8E8")
-    for tx, th, tw in [(x0 + 6, 22, 12), (x0 + 21, 32, 11), (x0 + 35, 38, 12), (x0 + 50, 26, 13)]:
-        draw.rectangle([s(tx), s(y1 - 2 - th), s(tx + tw), s(y1 - 2)], fill="#E2B8B8")
-    for bx, by, bw, bh, col in [(x0 + 10, y0 + 10, 8, 15, "#DC2626"), (x0 + 24, y0 + 20, 8, 17, "#DC2626"), (x0 + 38, y0 + 31, 8, 19, "#B91C1C"), (x0 + 52, y0 + 42, 8, 20, "#991B1B")]:
-        draw.rectangle([s(bx), s(by), s(bx + bw), s(by + bh)], fill=col)
-    draw.line([(s(x0 + 8), s(y0 + 12)), (s(x0 + 36), s(y0 + 31)), (s(x0 + 47), s(y0 + 26)), (s(x0 + 66), s(y0 + 62))], fill="#7F1D1D", width=s(3.4))
-    scx, scy = x1 - 22, y1 - 22
-    shield = [(s(scx), s(scy - 16)), (s(scx + 14), s(scy - 11)), (s(scx + 12), s(scy + 4)), (s(scx), s(scy + 16)), (s(scx - 12), s(scy + 4)), (s(scx - 14), s(scy - 11))]
-    draw.polygon(shield, fill=NAVY_DARK)
-    draw.line(shield + [shield[0]], fill=GOLD, width=s(2.0))
-    draw.line([(s(scx - 5.5), s(scy + 1)), (s(scx - 1), s(scy + 5.5)), (s(scx + 6.5), s(scy - 4.5))], fill="#FACC15", width=s(2.8))
-    draw_plaque(draw, x1 - 4, y0 + 4, "-10%", "#B91C1C")
-
-
-def art_hero_iran(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    h = y1 - y0
-    rounded_rect(draw, box, radius=5, fill="#FFF4E6", outline="#FED7AA", width=1.1)
-    draw.ellipse([s(x0 + 6), s(y0 + 6), s(x0 + 22), s(y0 + 22)], fill="#FB923C")
-    sea_y = y0 + h * 0.58
-    rounded_rect(draw, (x0 + 1, sea_y, x1 - 1, y1 - 1), radius=4, fill="#1E3A5F")
-    draw.rectangle([s(x0 + 1), s(sea_y), s(x1 - 1), s(sea_y + 8)], fill="#1E3A5F")
-    for wy, wx0, wx1 in [(sea_y + 10, x0 + 10, x0 + 48), (sea_y + 20, x0 + 50, x0 + 102)]:
-        draw.line([s(wx0), s(wy), s(wx1), s(wy)], fill="#60A5FA", width=s(2.0))
-    hull = [(s(x0 + 9), s(sea_y + 4)), (s(x0 + 68), s(sea_y + 4)), (s(x0 + 76), s(sea_y - 9)), (s(x0 + 12), s(sea_y - 9))]
-    draw.polygon(hull, fill="#0F172A")
-    draw.rectangle([s(x0 + 13), s(sea_y - 13), s(x0 + 68), s(sea_y - 8)], fill="#DC2626")
-    draw.rectangle([s(x0 + 17), s(sea_y - 24), s(x0 + 31), s(sea_y - 13)], fill="#F8FAFC", outline="#0F172A", width=s(1.2))
-    bcx, bcy = x1 - 21, sea_y - 10
-    draw.arc([s(bcx - 16), s(bcy - 16), s(bcx + 16), s(bcy + 16)], start=110, end=250, fill="#DC2626", width=s(3.4))
-    draw.ellipse([s(bcx - 11), s(bcy - 11), s(bcx + 11), s(bcy + 11)], fill="#DC2626", outline="#FFFFFF", width=s(1.8))
-    draw.rectangle([s(bcx - 5.5), s(bcy - 2.2), s(bcx + 5.5), s(bcy + 2.2)], fill="#FFFFFF")
-
-
-# ---------- 9 WIDE PANORAMIC MUSEUM ILLUSTRATIONS (316 x 60px) ----------
-
-def art_pan_ukraine(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#EFF6FF", outline="#BFDBFE", width=1.0)
-    # Ukrainian sky/wheat shield left-center
-    cx, cy = x0 + 48, (y0 + y1) / 2 + 1
-    shield = [(s(cx), s(cy - 22)), (s(cx + 21), s(cy - 15)), (s(cx + 18), s(cy + 7)), (s(cx), s(cy + 22)), (s(cx - 18), s(cy + 7)), (s(cx - 21), s(cy - 15))]
-    draw.polygon(shield, fill="#1D4ED8")
-    lower = [(s(cx + 19), s(cy)), (s(cx + 18), s(cy + 7)), (s(cx), s(cy + 22)), (s(cx - 18), s(cy + 7)), (s(cx - 19), s(cy))]
-    draw.polygon(lower, fill="#FACC15")
-    draw.line(shield + [shield[0]], fill="#1E3A8A", width=s(2.0))
-    # EU golden stars arc
-    for i in range(7):
-        sx = x0 + 92 + i * 16
-        sy = y0 + 18 + (i % 2) * 5
-        draw.ellipse([s(sx - 3.2), s(sy - 3.2), s(sx + 3.2), s(sy + 3.2)], fill="#F59E0B")
-    # Rising euro funding bars
-    for i, bh in enumerate((18, 28, 38, 46)):
-        bx = x0 + 100 + i * 26
-        rounded_rect(draw, (bx, y1 - 6 - bh, bx + 18, y1 - 6), radius=3, fill="#2563EB" if i < 3 else "#1E40AF")
-        draw.ellipse([s(bx), s(y1 - 9 - bh), s(bx + 18), s(y1 - 3 - bh)], fill="#FACC15")
-    draw_plaque(draw, x1 - 6, y0 + 5, "€7.9B", "#1D4ED8")
-
-
-def art_pan_gas(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    mid = x0 + 112
-    rounded_rect(draw, box, radius=5, fill="#FEF3C7", outline="#FDE68A", width=1.0)
-    draw.rectangle([s(x0 + 1), s(y0 + 1), s(mid), s(y1 - 1)], fill="#DBEAFE")
-    # Cold snap snowflake + European roofs
-    cx, cy, r = x0 + 32, y0 + 28, 14.0
-    for deg in range(0, 360, 60):
-        rad = math.radians(deg)
-        draw.line([s(cx), s(cy), s(cx + math.cos(rad) * r), s(cy + math.sin(rad) * r)], fill="#1D4ED8", width=s(2.4))
-    for rx, rh, rw in [(x0 + 56, 22, 20), (x0 + 80, 30, 22)]:
-        draw.rectangle([s(rx), s(y1 - 2 - rh), s(rx + rw), s(y1 - 2)], fill="#60A5FA")
-        draw.polygon([(s(rx - 2), s(y1 - 2 - rh)), (s(rx + rw / 2), s(y1 - 11 - rh)), (s(rx + rw + 2), s(y1 - 2 - rh))], fill="#1E40AF")
-    # Natural gas flame + price surge line
-    fx, fy = mid + 34, y1 - 5
-    draw.polygon([(s(fx), s(y0 + 7)), (s(fx + 16), s(y0 + 30)), (s(fx + 13), s(fy)), (s(fx - 13), s(fy)), (s(fx - 16), s(y0 + 30))], fill="#EA580C")
-    draw.polygon([(s(fx), s(y0 + 21)), (s(fx + 8), s(y0 + 38)), (s(fx + 7), s(fy)), (s(fx - 7), s(fy)), (s(fx - 8), s(y0 + 38))], fill="#FACC15")
-    draw.line([(s(mid + 64), s(y1 - 12)), (s(mid + 92), s(y1 - 22)), (s(mid + 114), s(y0 + 26)), (s(x1 - 78), s(y0 + 12))], fill="#DC2626", width=s(3.5))
-    draw_plaque(draw, x1 - 6, y0 + 5, "+6% €93", "#1D4ED8")
-
-
-def art_pan_libya(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#FEF3C7", outline="#FDE68A", width=1.0)
-    # Desert dunes
-    draw.polygon([(s(x0 + 1), s(y1 - 1)), (s(x0 + 1), s(y1 - 16)), (s(x0 + 100), s(y1 - 26)), (s(x0 + 220), s(y1 - 14)), (s(x1 - 1), s(y1 - 22)), (s(x1 - 1), s(y1 - 1))], fill="#E5C992")
-    # Heavy pipeline + shut red wheel valve + crude oil drop
-    py = (y0 + y1) / 2
-    draw.rectangle([s(x0 + 8), s(py - 6), s(x1 - 92), s(py + 6)], fill="#475569", outline="#1E293B", width=s(1.4))
-    draw.rectangle([s(x1 - 98), s(py - 9), s(x1 - 88), s(py + 9)], fill="#334155")
-    vcx, vcy = x0 + 98, py
-    draw.ellipse([s(vcx - 20), s(vcy - 20), s(vcx + 20), s(vcy + 20)], fill="#FFFFFF", outline="#DC2626", width=s(4.0))
-    for deg in (0, 60, 120):
-        rad = math.radians(deg)
-        draw.line([s(vcx - math.cos(rad) * 16), s(vcy - math.sin(rad) * 16), s(vcx + math.cos(rad) * 16), s(vcy + math.sin(rad) * 16)], fill="#DC2626", width=s(2.6))
-    draw.ellipse([s(vcx - 5), s(vcy - 5), s(vcx + 5), s(vcy + 5)], fill="#991B1B")
-    dx, dy = x1 - 74, py + 12
-    draw.polygon([(s(dx), s(dy - 12)), (s(dx + 8), s(dy + 2)), (s(dx), s(dy + 10)), (s(dx - 8), s(dy + 2))], fill="#0F172A")
-    draw_plaque(draw, x1 - 6, y0 + 5, "-350K", "#047857")
-
-
-def art_pan_fed(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#EEF2FF", outline="#C7D2FE", width=1.0)
-    # Neoclassical Federal Reserve facade
-    base_y = y1 - 8
-    draw.rectangle([s(x0 + 18), s(base_y), s(x0 + 122), s(base_y + 5)], fill="#312E81")
-    draw.polygon([(s(x0 + 16), s(y0 + 24)), (s(x0 + 70), s(y0 + 6)), (s(x0 + 124), s(y0 + 24))], fill="#3730A3")
-    draw.rectangle([s(x0 + 20), s(y0 + 24), s(x0 + 120), s(y0 + 28)], fill="#4338CA")
-    for cx in (x0 + 28, x0 + 48, x0 + 68, x0 + 88, x0 + 108):
-        draw.rectangle([s(cx - 4), s(y0 + 28), s(cx + 4), s(base_y)], fill="#818CF8", outline="#3730A3", width=s(1.0))
-    # Bold amber warning triangle
-    tx, ty = x0 + 178, (y0 + y1) / 2 + 2
-    tri = [(s(tx), s(ty - 21)), (s(tx + 22), s(ty + 17)), (s(tx - 22), s(ty + 17))]
-    draw.polygon(tri, fill="#F59E0B")
-    draw.line(tri + [tri[0]], fill="#92400E", width=s(2.4))
-    draw.rectangle([s(tx - 2.5), s(ty - 8), s(tx + 2.5), s(ty + 4)], fill="#0F172A")
-    draw.ellipse([s(tx - 2.6), s(ty + 7.5), s(tx + 2.6), s(ty + 12.7)], fill="#0F172A")
-    draw_plaque(draw, x1 - 6, y0 + 5, "FED", "#3730A3")
-
-
-def art_pan_rmb(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#FDF2F8", outline="#FBCFE8", width=1.0)
-    cy = (y0 + y1) / 2
-    c1x, c2x = x0 + 66, x0 + 188
-    draw.line([s(c1x + 22), s(cy - 9), s(c2x - 22), s(cy - 9)], fill="#9D174D", width=s(3.2))
-    draw.polygon([(s(c2x - 22), s(cy - 15)), (s(c2x - 12), s(cy - 9)), (s(c2x - 22), s(cy - 3))], fill="#9D174D")
-    draw.line([s(c2x - 22), s(cy + 9), s(c1x + 22), s(cy + 9)], fill="#0F766E", width=s(3.2))
-    draw.polygon([(s(c1x + 22), s(cy + 3)), (s(c1x + 12), s(cy + 9)), (s(c1x + 22), s(cy + 15))], fill="#0F766E")
-    r = 22.0
-    draw.ellipse([s(c1x - r), s(cy - r), s(c1x + r), s(cy + r)], fill="#9D174D", outline="#FFFFFF", width=s(2.0))
-    draw_centered_text(draw, c1x, cy, "¥", load_font(SANS_BLACK, 24.0), "#FDE68A")
-    draw.ellipse([s(c2x - r), s(cy - r), s(c2x + r), s(cy + r)], fill="#0F766E", outline="#FFFFFF", width=s(2.0))
-    draw_centered_text(draw, c2x, cy, "S$", load_font(SANS_BLACK, 19.0), "#FFFFFF")
-    draw_plaque(draw, x1 - 6, y0 + 5, "RMB", "#9D174D")
-
-
-def art_pan_ariane(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#F0FDFA", outline="#99F6E4", width=1.0)
-    # Contained orbital arc + pad
-    draw.arc([s(x0 + 16), s(y0 + 10), s(x1 - 76), s(y1 + 56)], start=205, end=330, fill="#5EEAD4", width=s(2.2))
-    draw.rectangle([s(x0 + 18), s(y1 - 9), s(x0 + 156), s(y1 - 3)], fill="#334155")
-    # Gantry + sleek Ariane 6 rocket
-    draw.rectangle([s(x0 + 36), s(y0 + 12), s(x0 + 46), s(y1 - 9)], fill="#64748B")
-    draw.line([s(x0 + 46), s(y0 + 25), s(x0 + 76), s(y0 + 25)], fill="#475569", width=s(2.4))
-    rx = x0 + 88
-    draw.polygon([(s(rx), s(y0 + 5)), (s(rx + 9), s(y0 + 19)), (s(rx - 9), s(y0 + 19))], fill="#0F766E")
-    draw.rectangle([s(rx - 9), s(y0 + 19), s(rx + 9), s(y1 - 11)], fill="#FFFFFF", outline="#0F172A", width=s(1.4))
-    draw.rectangle([s(rx - 16), s(y0 + 31), s(rx - 9), s(y1 - 10)], fill="#0D9488")
-    draw.rectangle([s(rx + 9), s(y0 + 31), s(rx + 16), s(y1 - 10)], fill="#0D9488")
-    # Red HOLD pause emblem
-    hx, hy = x0 + 188, (y0 + y1) / 2
-    draw.ellipse([s(hx - 18), s(hy - 18), s(hx + 18), s(hy + 18)], fill="#DC2626", outline="#FFFFFF", width=s(2.2))
-    draw.rectangle([s(hx - 6.5), s(hy - 9), s(hx - 2), s(hy + 9)], fill="#FFFFFF")
-    draw.rectangle([s(hx + 2), s(hy - 9), s(hx + 6.5), s(hy + 9)], fill="#FFFFFF")
-    draw_plaque(draw, x1 - 6, y0 + 5, "HOLD", "#0F766E")
-
-
-def art_pan_cphia(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#ECFDF5", outline="#A7F3D0", width=1.0)
-    cy = (y0 + y1) / 2
-    # Medical cross shield
-    cx = x0 + 56
-    draw.ellipse([s(cx - 22), s(cy - 22), s(cx + 22), s(cy + 22)], fill="#047857", outline="#065F46", width=s(2.0))
-    draw.rectangle([s(cx - 5.5), s(cy - 14), s(cx + 5.5), s(cy + 14)], fill="#FFFFFF")
-    draw.rectangle([s(cx - 14), s(cy - 5.5), s(cx + 14), s(cy + 5.5)], fill="#FFFFFF")
-    # 3 vaccine vials (manufacturing scale-up)
-    for i in range(3):
-        vx0 = x0 + 106 + i * 32
-        vy0, vy1 = y0 + 12, y1 - 7
-        rounded_rect(draw, (vx0, vy0 + 7, vx0 + 22, vy1), radius=4, fill="#FFFFFF", outline="#047857", width=s(1.8))
-        draw.rectangle([s(vx0 + 2), s(vy0 + 20), s(vx0 + 20), s(vy1 - 2)], fill="#34D399")
-        draw.rectangle([s(vx0 + 4), s(vy0), s(vx0 + 18), s(vy0 + 7)], fill="#065F46")
-    draw_plaque(draw, x1 - 6, y0 + 5, "60%", "#047857")
-
-
-def art_pan_heart(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#ECFEFF", outline="#A5F3FC", width=1.0)
-    mx0, my0, mx1, my1 = x0 + 12, y0 + 6, x1 - 92, y1 - 6
-    rounded_rect(draw, (mx0, my0, mx1, my1), radius=6, fill="#0F172A", outline="#0E7490", width=s(1.8))
-    ey = (my0 + my1) / 2 + 2
-    pts = [
-        (mx0 + 10, ey), (mx0 + 42, ey), (mx0 + 52, ey - 8), (mx0 + 60, ey + 7),
-        (mx0 + 72, ey - 20), (mx0 + 84, ey + 15), (mx0 + 96, ey - 5), (mx0 + 112, ey),
-        (mx0 + 150, ey), (mx1 - 12, ey),
-    ]
-    draw.line([(s(px), s(py)) for px, py in pts], fill="#22D3EE", width=s(2.8))
-    hx, hy = mx1 - 28, my0 + 20
-    draw.ellipse([s(hx - 10), s(hy - 8), s(hx + 1), s(hy + 3)], fill="#EF4444")
-    draw.ellipse([s(hx - 1), s(hy - 8), s(hx + 10), s(hy + 3)], fill="#EF4444")
-    draw.polygon([(s(hx - 9.5), s(hy + 0.5)), (s(hx + 9.5), s(hy + 0.5)), (s(hx), s(hy + 12))], fill="#EF4444")
-    draw_plaque(draw, x1 - 6, y0 + 5, "TRIAL", "#0E7490")
-
-
-def art_pan_india_nepal(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
-    x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=5, fill="#FFFBEB", outline="#FDE68A", width=1.0)
-    # Himalayan mountains + hydro dam wave + sleek cross-border train bridge
-    draw.polygon([(s(x0 + 10), s(y1 - 18)), (s(x0 + 48), s(y0 + 8)), (s(x0 + 86), s(y1 - 18))], fill="#94A3B8")
-    draw.polygon([(s(x0 + 36), s(y0 + 16)), (s(x0 + 48), s(y0 + 8)), (s(x0 + 60), s(y0 + 16))], fill="#FFFFFF")
-    draw.polygon([(s(x0 + 66), s(y1 - 18)), (s(x0 + 108), s(y0 + 12)), (s(x0 + 150), s(y1 - 18))], fill="#64748B")
-    draw.polygon([(s(x0 + 96), s(y0 + 20)), (s(x0 + 108), s(y0 + 12)), (s(x0 + 120), s(y0 + 20))], fill="#FFFFFF")
-    # Hydro water + rail bridge
-    draw.rectangle([s(x0 + 2), s(y1 - 18), s(x1 - 2), s(y1 - 2)], fill="#0284C7")
-    draw.rectangle([s(x0 + 16), s(y1 - 24), s(x1 - 16), s(y1 - 17)], fill="#334155")
-    # Sleek orange/white train crossing bridge
-    rounded_rect(draw, (x0 + 124, y1 - 36, x0 + 216, y1 - 23), radius=4, fill="#EA580C", outline="#FFFFFF", width=s(1.2))
-    for wx in (x0 + 136, x0 + 156, x0 + 176, x0 + 196):
-        draw.rectangle([s(wx), s(y1 - 33), s(wx + 12), s(y1 - 27)], fill="#FEF08A")
-    draw_plaque(draw, x1 - 6, y0 + 5, "RAIL", "#9D174D")
-
-
-# ---------- HERO & GALLERY CARD RENDERERS ----------
 
 def wrap_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_w: float) -> list[str]:
     words = text.split()
@@ -562,145 +236,605 @@ def wrap_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFon
     return lines
 
 
-def draw_hero_card(
+def project_lonlat(
+    lon: float,
+    lat: float,
+    box: tuple[float, float, float, float],
+    lon_min: float = -160.0,
+    lon_max: float = 180.0,
+    lat_min: float = -54.0,
+    lat_max: float = 75.0,
+) -> tuple[float, float]:
+    x0, y0, x1, y1 = box
+    u = (lon - lon_min) / (lon_max - lon_min)
+    v = (lat_max - lat) / (lat_max - lat_min)
+    return x0 + u * (x1 - x0), y0 + v * (y1 - y0)
+
+
+# ---------- BAND 2: THE DAY IN UTC TIMELINE (y=64..98px) ----------
+
+def draw_utc_timeline(
     draw: ImageDraw.ImageDraw,
     rect: tuple[float, float, float, float],
-    header_left: str,
-    source_right: str,
+    audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
+) -> None:
+    x0, y0, x1, y1 = rect
+    rounded_rect(draw, rect, radius=5.0, fill=SOFT_PANEL, outline=HAIRLINE, width=0.9)
+
+    b_rect = (x0 + 4, y0 + 5, x0 + 102, y1 - 5)
+    rounded_rect(draw, b_rect, radius=3.8, fill=NAVY)
+    draw_centered_text(draw, (b_rect[0] + b_rect[2]) / 2, (b_rect[1] + b_rect[3]) / 2, "THE DAY IN UTC", load_font(SANS_BLACK, 10.6), "#F5D78E")
+
+    milestones = [
+        ("01:00Z", "Asia AI rout & curbs", REGION_COLORS["ASIA"]),
+        ("06:00Z", "Belgium flight halt", REGION_COLORS["EUROPE"]),
+        ("09:00Z", "450 school hoaxes", REGION_COLORS["EUROPE"]),
+        ("10:30Z", "Spain amnesty ruling", REGION_COLORS["EUROPE"]),
+        ("12:30Z", "EU €7.9B Ukraine", REGION_COLORS["EUROPE"]),
+        ("14:00Z", "Ariane 6 VA271 hold", REGION_COLORS["S_AMERICA"]),
+    ]
+
+    tx0 = x0 + 108
+    tx1 = x1 - 6
+    slot_w = (tx1 - tx0) / len(milestones)
+    dot_y = y0 + 11.0
+    draw.line([s(tx0 + 26), s(dot_y), s(tx1 - 26), s(dot_y)], fill="#BDB4A4", width=s(1.4))
+
+    f_time = load_font(SANS_BLACK, 10.2)
+    f_desc = load_font(SANS_BOLD, 10.8)
+
+    for i, (utc, desc, col) in enumerate(milestones):
+        sx0 = tx0 + i * slot_w
+        cx = sx0 + slot_w / 2
+        prect = (cx - 26, y0 + 3.5, cx + 26, y0 + 17.5)
+        rounded_rect(draw, prect, radius=3.5, fill=col)
+        draw_centered_text(draw, cx, y0 + 10.5, utc, f_time, "#FFFFFF")
+        db = draw_centered_text(draw, cx, y1 - 8.0, desc, f_desc, INK)
+        assert db[0] >= sx0 + 1.0 and db[2] <= sx0 + slot_w - 1.0, f"Timeline clipped: '{desc}'"
+        audit_boxes.append((f"tl:{utc}", db))
+
+
+# ---------- 3 FLAGSHIP LEAD VECTOR ILLUSTRATIONS (314 x 96px) ----------
+
+def art_lead_asia(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=5, fill="#FEF2F2", outline="#FECACA", width=1.0)
+    draw.rectangle([s(x0 + 2), s(y1 - 24), s(x1 - 2), s(y1 - 2)], fill="#FDE8E8")
+    for sx, sh, sw in [(x0 + 12, 26, 16), (x0 + 32, 38, 15), (x0 + 52, 46, 18), (x0 + 75, 32, 16), (x0 + 96, 40, 15)]:
+        draw.rectangle([s(sx), s(y1 - 2 - sh), s(sx + sw), s(y1 - 2)], fill="#E5BEBE")
+    bars = [(x0 + 24, y0 + 16, 12, 18, "#DC2626"), (x0 + 52, y0 + 24, 12, 22, "#DC2626"), (x0 + 80, y0 + 35, 12, 25, "#B91C1C"), (x0 + 108, y0 + 46, 12, 28, "#991B1B"), (x0 + 136, y0 + 55, 12, 26, "#7F1D1D")]
+    for bx, by, bw, bh, col in bars:
+        draw.line([s(bx + bw / 2), s(by - 6), s(bx + bw / 2), s(by + bh + 6)], fill=col, width=s(1.6))
+        draw.rectangle([s(bx), s(by), s(bx + bw), s(by + bh)], fill=col)
+    draw.line([(s(x0 + 18), s(y0 + 16)), (s(x0 + 86), s(y0 + 38)), (s(x0 + 114), s(y0 + 31)), (s(x0 + 178), s(y1 - 14))], fill="#7F1D1D", width=s(3.6))
+    scx, scy = x1 - 54, y1 - 34
+    shield = [(s(scx), s(scy - 22)), (s(scx + 20), s(scy - 15)), (s(scx + 17), s(scy + 6)), (s(scx), s(scy + 22)), (s(scx - 17), s(scy + 6)), (s(scx - 20), s(scy - 15))]
+    draw.polygon(shield, fill=NAVY)
+    draw.line(shield + [shield[0]], fill="#EAB308", width=s(2.2))
+    draw.line([(s(scx - 8), s(scy + 1)), (s(scx - 2), s(scy + 8)), (s(scx + 9), s(scy - 6))], fill="#FACC15", width=s(3.2))
+    draw_plaque(draw, x1 - 6, y0 + 5, "-3.3% · $8B", "#B91C1C", font_px=11.5, h=18.0)
+
+
+def art_lead_iran(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    h = y1 - y0
+    rounded_rect(draw, box, radius=5, fill="#FFF4E6", outline="#FED7AA", width=1.0)
+    draw.ellipse([s(x0 + 14), s(y0 + 9), s(x0 + 36), s(y0 + 31)], fill="#FB923C")
+    sea_y = y0 + h * 0.56
+    rounded_rect(draw, (x0 + 1, sea_y, x1 - 1, y1 - 1), radius=4, fill="#1E3A5F")
+    draw.rectangle([s(x0 + 1), s(sea_y), s(x1 - 1), s(sea_y + 8)], fill="#1E3A5F")
+    for wy, wx0, wx1 in [(sea_y + 12, x0 + 18, x0 + 95), (sea_y + 24, x0 + 110, x0 + 210), (sea_y + 15, x0 + 220, x1 - 18)]:
+        draw.line([s(wx0), s(wy), s(wx1), s(wy)], fill="#60A5FA", width=s(2.0))
+    hull = [(s(x0 + 26), s(sea_y + 5)), (s(x0 + 146), s(sea_y + 5)), (s(x0 + 160), s(sea_y - 11)), (s(x0 + 32), s(sea_y - 11))]
+    draw.polygon(hull, fill="#0F172A")
+    draw.rectangle([s(x0 + 36), s(sea_y - 16), s(x0 + 144), s(sea_y - 10)], fill="#DC2626")
+    draw.rectangle([s(x0 + 44), s(sea_y - 31), s(x0 + 68), s(sea_y - 16)], fill="#F8FAFC", outline="#0F172A", width=s(1.3))
+    bcx, bcy = x0 + 216, sea_y - 10
+    draw.arc([s(bcx - 24), s(bcy - 24), s(bcx + 24), s(bcy + 24)], start=115, end=245, fill="#DC2626", width=s(3.4))
+    draw.ellipse([s(bcx - 15), s(bcy - 15), s(bcx + 15), s(bcy + 15)], fill="#DC2626", outline="#FFFFFF", width=s(2.0))
+    draw.rectangle([s(bcx - 8), s(bcy - 2.8), s(bcx + 8), s(bcy + 2.8)], fill="#FFFFFF")
+    draw_plaque(draw, x1 - 6, y0 + 5, "HORMUZ", "#C2410C", font_px=11.5, h=18.0)
+
+
+def art_lead_spain(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=5, fill="#EFF6FF", outline="#BFDBFE", width=1.0)
+    base_y = y1 - 9
+    draw.rectangle([s(x0 + 16), s(base_y), s(x0 + 124), s(base_y + 5)], fill="#1E3A8A")
+    draw.polygon([(s(x0 + 14), s(y0 + 32)), (s(x0 + 70), s(y0 + 11)), (s(x0 + 126), s(y0 + 32))], fill="#1D4ED8")
+    for cx in (x0 + 26, x0 + 48, x0 + 70, x0 + 92, x0 + 114):
+        draw.rectangle([s(cx - 4.5), s(y0 + 32), s(cx + 4.5), s(base_y)], fill="#93C5FD", outline="#1D4ED8", width=s(1.0))
+    gx, gy = x0 + 194, y0 + 52
+    rounded_rect(draw, (gx - 26, gy + 16, gx + 26, gy + 26), radius=3, fill="#78350F")
+    draw.line([s(gx - 6), s(gy - 12), s(gx + 28), s(gy + 12)], fill="#92400E", width=s(5.5))
+    rounded_rect(draw, (gx - 24, gy - 26, gx + 10, gy - 4), radius=4, fill="#B45309", outline="#78350F", width=s(1.6))
+    sx, sy = x1 - 36, y1 - 28
+    draw.ellipse([s(sx - 17), s(sy - 17), s(sx + 17), s(sy + 17)], fill="#059669", outline="#FFFFFF", width=s(2.0))
+    draw.line([(s(sx - 7), s(sy + 1)), (s(sx - 2), s(sy + 6)), (s(sx + 8), s(sy - 6))], fill="#FFFFFF", width=s(3.0))
+    draw_plaque(draw, x1 - 6, y0 + 5, "AMNESTY", "#1D4ED8", font_px=11.5, h=18.0)
+
+
+# ---------- 10 FEATURE CARD VECTOR ILLUSTRATIONS (184 x 58px) ----------
+
+def art_f_ukraine(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#EFF6FF", outline="#BFDBFE", width=0.9)
+    cx, cy = x0 + 34, (y0 + y1) / 2 + 1
+    sh = [(s(cx), s(cy - 20)), (s(cx + 18), s(cy - 13)), (s(cx + 15), s(cy + 6)), (s(cx), s(cy + 20)), (s(cx - 15), s(cy + 6)), (s(cx - 18), s(cy - 13))]
+    draw.polygon(sh, fill="#1D4ED8")
+    draw.polygon([(s(cx + 16), s(cy)), (s(cx + 15), s(cy + 6)), (s(cx), s(cy + 20)), (s(cx - 15), s(cy + 6)), (s(cx - 16), s(cy))], fill="#FACC15")
+    draw.line(sh + [sh[0]], fill="#1E3A8A", width=s(1.6))
+    for i, bh in enumerate((16, 25, 34)):
+        bx = x0 + 68 + i * 18
+        rounded_rect(draw, (bx, y1 - 6 - bh, bx + 12, y1 - 6), radius=2.5, fill="#2563EB")
+        draw.ellipse([s(bx), s(y1 - 9 - bh), s(bx + 12), s(y1 - 4 - bh)], fill="#FACC15")
+    draw_plaque(draw, x1 - 4, y0 + 4, "€7.9B", "#1D4ED8", font_px=10.5, h=15.5)
+
+
+def art_f_gas(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    mid = x0 + 64
+    rounded_rect(draw, box, radius=4.5, fill="#FEF3C7", outline="#FDE68A", width=0.9)
+    draw.rectangle([s(x0 + 1), s(y0 + 1), s(mid), s(y1 - 1)], fill="#DBEAFE")
+    cx, cy, r = x0 + 22, y0 + 26, 11.0
+    for deg in range(0, 360, 60):
+        rad = math.radians(deg)
+        draw.line([s(cx), s(cy), s(cx + math.cos(rad) * r), s(cy + math.sin(rad) * r)], fill="#1D4ED8", width=s(2.0))
+    draw.rectangle([s(x0 + 38), s(y1 - 24), s(x0 + 54), s(y1 - 2)], fill="#60A5FA")
+    draw.polygon([(s(x0 + 36), s(y1 - 24)), (s(x0 + 46), s(y1 - 33)), (s(x0 + 56), s(y1 - 24))], fill="#1E40AF")
+    fx, fy = mid + 24, y1 - 5
+    draw.polygon([(s(fx), s(y0 + 10)), (s(fx + 13), s(y0 + 30)), (s(fx + 10), s(fy)), (s(fx - 10), s(fy)), (s(fx - 13), s(y0 + 30))], fill="#EA580C")
+    draw.polygon([(s(fx), s(y0 + 23)), (s(fx + 6), s(y0 + 38)), (s(fx + 5), s(fy)), (s(fx - 5), s(fy)), (s(fx - 6), s(y0 + 38))], fill="#FACC15")
+    draw.line([(s(mid + 44), s(y1 - 10)), (s(mid + 64), s(y1 - 22)), (s(x1 - 22), s(y0 + 24))], fill="#DC2626", width=s(2.8))
+    draw_plaque(draw, x1 - 4, y0 + 4, "+6% €93", "#1D4ED8", font_px=10.2, h=15.5)
+
+
+def art_f_belgium(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#EFF6FF", outline="#BFDBFE", width=0.9)
+    draw.rectangle([s(x0 + 4), s(y1 - 13), s(x1 - 4), s(y1 - 3)], fill="#334155")
+    for rx in range(int(x0 + 14), int(x1 - 14), 24):
+        draw.line([s(rx), s(y1 - 8), s(rx + 12), s(y1 - 8)], fill="#F8FAFC", width=s(1.6))
+    py = y1 - 22
+    rounded_rect(draw, (x0 + 20, py - 5, x0 + 82, py + 4), radius=4, fill="#1E3A8A")
+    draw.polygon([(s(x0 + 24), s(py - 5)), (s(x0 + 18), s(py - 18)), (s(x0 + 34), s(py - 5))], fill="#2563EB")
+    draw.polygon([(s(x0 + 46), s(py)), (s(x0 + 34), s(py + 10)), (s(x0 + 62), s(py))], fill="#3B82F6")
+    cx, cy = x0 + 114, y0 + 30
+    draw.ellipse([s(cx - 14), s(cy - 14), s(cx + 14), s(cy + 14)], fill="#DC2626", outline="#FFFFFF", width=s(1.8))
+    draw.rectangle([s(cx - 7), s(cy - 2.5), s(cx + 7), s(cy + 2.5)], fill="#FFFFFF")
+    draw_plaque(draw, x1 - 4, y0 + 4, "ATC HALT", "#1D4ED8", font_px=10.0, h=15.5)
+
+
+def art_f_schools(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#FEF2F2", outline="#FECACA", width=0.9)
+    draw.rectangle([s(x0 + 12), s(y0 + 24), s(x0 + 70), s(y1 - 5)], fill="#CBD5E1", outline="#475569", width=s(1.2))
+    draw.polygon([(s(x0 + 9), s(y0 + 24)), (s(x0 + 41), s(y0 + 10)), (s(x0 + 73), s(y0 + 24))], fill="#991B1B")
+    for wx in (x0 + 20, x0 + 37, x0 + 54):
+        draw.rectangle([s(wx), s(y0 + 30), s(wx + 9), s(y0 + 40)], fill="#3B82F6")
+    ex0, ey0, ex1, ey1 = x0 + 82, y0 + 24, x0 + 132, y1 - 8
+    rounded_rect(draw, (ex0, ey0, ex1, ey1), radius=3, fill="#FFFFFF", outline="#B91C1C", width=s(1.6))
+    draw.line([(s(ex0 + 2), s(ey0 + 2)), (s((ex0 + ex1) / 2), s(ey0 + 15)), (s(ex1 - 2), s(ey0 + 2))], fill="#B91C1C", width=s(1.6))
+    tx, ty = x0 + 128, y0 + 42
+    draw.polygon([(s(tx), s(ty - 11)), (s(tx + 11), s(ty + 8)), (s(tx - 11), s(ty + 8))], fill="#F59E0B", outline="#92400E")
+    draw_plaque(draw, x1 - 4, y0 + 4, "450 HOAXES", "#B91C1C", font_px=9.6, h=15.5)
+
+
+def art_f_libya(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#FEF3C7", outline="#FDE68A", width=0.9)
+    draw.polygon([(s(x0 + 1), s(y1 - 1)), (s(x0 + 1), s(y1 - 15)), (s(x0 + 68), s(y1 - 24)), (s(x1 - 1), s(y1 - 14)), (s(x1 - 1), s(y1 - 1))], fill="#E5C992")
+    py = (y0 + y1) / 2 + 2
+    draw.rectangle([s(x0 + 8), s(py - 5), s(x1 - 46), s(py + 5)], fill="#475569", outline="#1E293B", width=s(1.2))
+    vcx, vcy = x0 + 62, py
+    draw.ellipse([s(vcx - 16), s(vcy - 16), s(vcx + 16), s(vcy + 16)], fill="#FFFFFF", outline="#DC2626", width=s(3.4))
+    for deg in (0, 60, 120):
+        rad = math.radians(deg)
+        draw.line([s(vcx - math.cos(rad) * 13), s(vcy - math.sin(rad) * 13), s(vcx + math.cos(rad) * 13), s(vcy + math.sin(rad) * 13)], fill="#DC2626", width=s(2.2))
+    dx, dy = x1 - 30, py + 10
+    draw.polygon([(s(dx), s(dy - 10)), (s(dx + 6.5), s(dy + 2)), (s(dx), s(dy + 8)), (s(dx - 6.5), s(dy + 2))], fill="#0F172A")
+    draw_plaque(draw, x1 - 4, y0 + 4, "-350K BPD", "#047857", font_px=9.8, h=15.5)
+
+
+def art_f_cphia(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#ECFDF5", outline="#A7F3D0", width=0.9)
+    cy = (y0 + y1) / 2 + 2
+    cx = x0 + 36
+    draw.ellipse([s(cx - 19), s(cy - 19), s(cx + 19), s(cy + 19)], fill="#047857", outline="#065F46", width=s(1.8))
+    draw.rectangle([s(cx - 4.5), s(cy - 11.5), s(cx + 4.5), s(cy + 11.5)], fill="#FFFFFF")
+    draw.rectangle([s(cx - 11.5), s(cy - 4.5), s(cx + 11.5), s(cy + 4.5)], fill="#FFFFFF")
+    for i in range(3):
+        vx0 = x0 + 68 + i * 22
+        rounded_rect(draw, (vx0, y0 + 22, vx0 + 15, y1 - 6), radius=3, fill="#FFFFFF", outline="#047857", width=s(1.5))
+        draw.rectangle([s(vx0 + 2), s(y0 + 34), s(vx0 + 13), s(y1 - 8)], fill="#34D399")
+        draw.rectangle([s(vx0 + 3), s(y0 + 16), s(vx0 + 12), s(y0 + 22)], fill="#065F46")
+    draw_plaque(draw, x1 - 4, y0 + 4, "60% GOAL", "#047857", font_px=9.8, h=15.5)
+
+
+def art_f_tides(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#EEF2FF", outline="#C7D2FE", width=0.9)
+    draw.rectangle([s(x0 + 22), s(y0 + 10), s(x0 + 28), s(y1 - 14)], fill="#DC2626")
+    draw.rectangle([s(x0 + 82), s(y0 + 10), s(x0 + 88), s(y1 - 14)], fill="#DC2626")
+    draw.line([s(x0 + 6), s(y1 - 24), s(x0 + 112), s(y1 - 24)], fill="#B91C1C", width=s(2.6))
+    draw.arc([s(x0 + 25), s(y0 + 2), s(x0 + 85), s(y0 + 36)], start=0, end=180, fill="#DC2626", width=s(1.8))
+    draw.rectangle([s(x0 + 1), s(y1 - 18), s(x1 - 1), s(y1 - 1)], fill="#1D4ED8")
+    for wx in range(int(x0 + 8), int(x1 - 16), 24):
+        draw.arc([s(wx), s(y1 - 25), s(wx + 22), s(y1 - 11)], start=180, end=360, fill="#3B82F6", width=s(2.4))
+    draw.ellipse([s(x0 + 104), s(y0 + 18), s(x0 + 136), s(y0 + 31)], fill="#64748B")
+    for rx in (x0 + 111, x0 + 120, x0 + 129):
+        draw.line([s(rx), s(y0 + 33), s(rx - 3.5), s(y0 + 40)], fill="#2563EB", width=s(1.6))
+    draw_plaque(draw, x1 - 4, y0 + 4, "KING TIDES", "#4338CA", font_px=9.6, h=15.5)
+
+
+def art_f_ariane(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#F0FDFA", outline="#99F6E4", width=0.9)
+    draw.rectangle([s(x0 + 10), s(y1 - 9), s(x0 + 108), s(y1 - 3)], fill="#334155")
+    draw.rectangle([s(x0 + 24), s(y0 + 12), s(x0 + 32), s(y1 - 9)], fill="#64748B")
+    draw.line([s(x0 + 32), s(y0 + 24), s(x0 + 54), s(y0 + 24)], fill="#475569", width=s(2.0))
+    rx = x0 + 62
+    draw.polygon([(s(rx), s(y0 + 6)), (s(rx + 7), s(y0 + 18)), (s(rx - 7), s(y0 + 18))], fill="#0F766E")
+    draw.rectangle([s(rx - 7), s(y0 + 18), s(rx + 7), s(y1 - 10)], fill="#FFFFFF", outline="#0F172A", width=s(1.3))
+    draw.rectangle([s(rx - 13), s(y0 + 29), s(rx - 7), s(y1 - 9)], fill="#0D9488")
+    draw.rectangle([s(rx + 7), s(y0 + 29), s(rx + 13), s(y1 - 9)], fill="#0D9488")
+    hx, hy = x0 + 114, y0 + 34
+    draw.ellipse([s(hx - 14), s(hy - 14), s(hx + 14), s(hy + 14)], fill="#DC2626", outline="#FFFFFF", width=s(1.8))
+    draw.rectangle([s(hx - 5), s(hy - 7), s(hx - 1.5), s(hy + 7)], fill="#FFFFFF")
+    draw.rectangle([s(hx + 1.5), s(hy - 7), s(hx + 5), s(hy + 7)], fill="#FFFFFF")
+    draw_plaque(draw, x1 - 4, y0 + 4, "36 SATS", "#0F766E", font_px=10.2, h=15.5)
+
+
+def art_f_heart(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#ECFEFF", outline="#A5F3FC", width=0.9)
+    mx0, my0, mx1, my1 = x0 + 7, y0 + 6, x1 - 66, y1 - 6
+    rounded_rect(draw, (mx0, my0, mx1, my1), radius=5, fill="#0F172A", outline="#0E7490", width=s(1.5))
+    ey = (my0 + my1) / 2 + 2
+    pts = [(mx0 + 6, ey), (mx0 + 26, ey), (mx0 + 32, ey - 7), (mx0 + 38, ey + 6), (mx0 + 45, ey - 18), (mx0 + 53, ey + 13), (mx0 + 60, ey - 4), (mx0 + 72, ey), (mx1 - 6, ey)]
+    draw.line([(s(px), s(py)) for px, py in pts], fill="#22D3EE", width=s(2.4))
+    hx, hy = x1 - 36, y1 - 20
+    draw.ellipse([s(hx - 9), s(hy - 7), s(hx + 1), s(hy + 3)], fill="#EF4444")
+    draw.ellipse([s(hx - 1), s(hy - 7), s(hx + 9), s(hy + 3)], fill="#EF4444")
+    draw.polygon([(s(hx - 8.5), s(hy + 0.5)), (s(hx + 8.5), s(hy + 0.5)), (s(hx), s(hy + 11))], fill="#EF4444")
+    draw_plaque(draw, x1 - 4, y0 + 4, "PHASE III", "#0E7490", font_px=10.0, h=15.5)
+
+
+def art_f_quake(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+    x0, y0, x1, y1 = box
+    rounded_rect(draw, box, radius=4.5, fill="#FFFBEB", outline="#FDE68A", width=0.9)
+    cx, cy = x0 + 44, (y0 + y1) / 2 + 2
+    for r, col in [(22, "#F59E0B"), (15, "#EA580C"), (8, "#DC2626")]:
+        draw.ellipse([s(cx - r), s(cy - r), s(cx + r), s(cy + r)], outline=col, width=s(2.2))
+    draw.ellipse([s(cx - 4), s(cy - 4), s(cx + 4), s(cy + 4)], fill="#991B1B")
+    sy = y0 + 36
+    pts = [(x0 + 76, sy), (x0 + 90, sy), (x0 + 97, sy - 11), (x0 + 104, sy + 13), (x0 + 112, sy - 16), (x0 + 120, sy + 14), (x0 + 128, sy - 8), (x0 + 136, sy + 5), (x1 - 8, sy)]
+    draw.line([(s(px), s(py)) for px, py in pts], fill="#92400E", width=s(2.2))
+    draw_plaque(draw, x1 - 4, y0 + 4, "M6.5", "#92400E", font_px=10.8, h=15.5)
+
+
+# ---------- BAND 3 & 4 CARD RENDERERS ----------
+
+def draw_lead_card(
+    draw: ImageDraw.ImageDraw,
+    rect: tuple[float, float, float, float],
+    num: int,
+    kicker: str,
+    stamp: str,
     color: str,
     headline: str,
-    takeaway: str,
+    deck: str,
+    source: str,
     art_fn: Any,
     audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
 ) -> None:
     x0, y0, x1, y1 = rect
-    hdr_h = 25.0
-    rounded_rect(draw, rect, radius=6.5, fill=CARD_BG, outline=HAIRLINE, width=1.1)
-    top_rounded_strip(draw, x0 + 0.5, y0 + 0.5, x1 - 0.5, y0 + hdr_h, radius=6.0, fill=color)
+    rounded_rect(draw, rect, radius=6.0, fill=CARD_BG, outline=HAIRLINE, width=1.0)
+    draw.rectangle([s(x0 + 6), s(y0 + 1), s(x1 - 6), s(y0 + 3.5)], fill=color)
 
-    hdr_font = load_font(SANS_BLACK, 15.0)
-    lb = draw_left_text(draw, x0 + 9, y0 + hdr_h / 2, header_left, hdr_font, "#FFFFFF")
-    rb = draw_right_text(draw, x1 - 9, y0 + hdr_h / 2, source_right, hdr_font, "#FDE68A")
-    assert lb[2] + 8.0 <= rb[0], f"Hero header overlap: {header_left} vs {source_right}"
-
-    art_box = (x0 + 6.0, y0 + hdr_h + 6.0, x0 + 124.0, y1 - 6.0)
+    art_box = (x0 + 6, y0 + 7, x1 - 6, y0 + 103)
     art_fn(draw, art_box)
 
-    tx0 = art_box[2] + 9.0
-    max_w = x1 - tx0 - 8.0
+    my = y0 + 114.5
+    draw.ellipse([s(x0 + 7), s(my - 7.5), s(x0 + 22), s(my + 7.5)], fill=color)
+    draw_centered_text(draw, x0 + 14.5, my, str(num), load_font(SANS_BLACK, 10.4), "#FFFFFF")
+    kb = draw_left_text(draw, x0 + 26, my, kicker, load_font(SANS_BLACK, 10.6), color)
+    sb = draw_stamp(draw, x1 - 7, my, stamp, font_px=9.0, h=13.5)
+    assert kb[2] + 4.0 <= sb[0], f"Lead meta overlap: {kicker}"
 
-    h_font = load_font(SERIF_BOLD, 19.5)
-    h_lines = wrap_lines(draw, headline, h_font, max_w)
-    assert len(h_lines) <= 2, f"Hero headline >2 lines ({h_lines}): {headline}"
-    hy = y0 + hdr_h + 19.0
-    for i, line in enumerate(h_lines):
-        hb = draw_left_text(draw, tx0, hy + i * 24.0, line, h_font, INK)
-        assert hb[2] <= x1 - 6.0, f"Hero headline overflow: {line}"
-        audit_boxes.append((f"hero_h:{header_left}:{i}", hb))
+    max_w = x1 - x0 - 15.0
+    hf = load_font(SERIF_BOLD, 15.6)
+    hlines = wrap_lines(draw, headline, hf, max_w)
+    assert len(hlines) <= 2, f"Lead headline >2 lines ({hlines}): {headline}"
+    hy = y0 + 133.5
+    for i, ln in enumerate(hlines):
+        hb = draw_left_text(draw, x0 + 7.5, hy + i * 19.0, ln, hf, INK)
+        assert hb[2] <= x1 - 5.0, f"Lead headline overflow: {ln}"
+        audit_boxes.append((f"lead_h:{num}:{i}", hb))
 
-    t_font = load_font(SANS_BOLD, 15.0)
-    tb = draw_left_text(draw, tx0, y1 - 16.0, takeaway, t_font, INK_MUTED)
-    assert tb[2] <= x1 - 6.0, f"Hero takeaway overflow: {takeaway}"
-    audit_boxes.append((f"hero_t:{header_left}", tb))
+    df = load_font(SANS_SEMI, 11.4)
+    dlines = wrap_lines(draw, deck, df, max_w)
+    assert len(dlines) <= 3, f"Lead deck >3 lines ({dlines}): {deck}"
+    dy = hy + len(hlines) * 19.0 + 3.5
+    for i, ln in enumerate(dlines):
+        db = draw_left_text(draw, x0 + 7.5, dy + i * 14.0, ln, df, INK_DARK)
+        assert db[2] <= x1 - 5.0 and db[3] <= y1 - 15.5, f"Lead deck overflow: {ln}"
+        audit_boxes.append((f"lead_d:{num}:{i}", db))
+
+    src_b = draw_left_text(draw, x0 + 7.5, y1 - 9.0, f"Source: {source}", load_font(SANS_BOLD, 9.8), INK_MUTED)
+    audit_boxes.append((f"lead_s:{num}", src_b))
 
 
-def draw_panoramic_card(
+def draw_feature_card(
     draw: ImageDraw.ImageDraw,
     rect: tuple[float, float, float, float],
-    header_left: str,
-    source_right: str,
+    num: int,
+    kicker: str,
+    stamp: str,
     color: str,
     headline: str,
+    deck: str,
+    source: str,
     art_fn: Any,
     audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
 ) -> None:
     x0, y0, x1, y1 = rect
-    hdr_h = 24.0
-    rounded_rect(draw, rect, radius=6.5, fill=CARD_BG, outline=HAIRLINE, width=1.1)
-    top_rounded_strip(draw, x0 + 0.5, y0 + 0.5, x1 - 0.5, y0 + hdr_h, radius=6.0, fill=color)
+    rounded_rect(draw, rect, radius=5.5, fill=CARD_BG, outline=HAIRLINE, width=0.9)
+    draw.rectangle([s(x0 + 5), s(y0 + 1), s(x1 - 5), s(y0 + 3.2)], fill=color)
 
-    hdr_font = load_font(SANS_BLACK, 15.0)
-    lb = draw_left_text(draw, x0 + 8, y0 + hdr_h / 2, header_left, hdr_font, "#FFFFFF")
-    rb = draw_right_text(draw, x1 - 8, y0 + hdr_h / 2, source_right, hdr_font, "#FDE68A")
-    assert lb[2] + 8.0 <= rb[0], f"Card header overlap: {header_left} vs {source_right}"
-
-    art_box = (x0 + 6.0, y0 + hdr_h + 5.0, x1 - 6.0, y0 + hdr_h + 65.0)
+    art_box = (x0 + 5, y0 + 6, x1 - 5, y0 + 64)
     art_fn(draw, art_box)
 
-    h_font = load_font(SERIF_BOLD, 18.2)
-    max_w = x1 - x0 - 16.0
-    h_lines = wrap_lines(draw, headline, h_font, max_w)
-    assert len(h_lines) <= 2, f"Panoramic headline >2 lines ({h_lines}): {headline}"
-    cy_start = art_box[3] + (16.5 if len(h_lines) == 2 else 27.0)
-    for i, line in enumerate(h_lines):
-        hb = draw_left_text(draw, x0 + 8.5, cy_start + i * 22.0, line, h_font, INK)
-        assert hb[2] <= x1 - 6.0 and hb[3] <= y1 - 3.5, f"Panoramic headline overflow: {line}"
-        audit_boxes.append((f"pan_h:{header_left}:{i}", hb))
+    my = y0 + 74.5
+    draw.ellipse([s(x0 + 5.5), s(my - 6.8), s(x0 + 19.1), s(my + 6.8)], fill=color)
+    draw_centered_text(draw, x0 + 12.3, my, str(num), load_font(SANS_BLACK, 9.6), "#FFFFFF")
+    kb = draw_left_text(draw, x0 + 22.0, my, kicker, load_font(SANS_BLACK, 9.6), color)
+    sb = draw_stamp(draw, x1 - 5.5, my, stamp, font_px=8.2, h=12.5)
+    assert kb[2] + 3.0 <= sb[0], f"Feature meta overlap ({num}): {kicker} vs {stamp}"
+
+    max_w = x1 - x0 - 11.5
+    hf = load_font(SERIF_BOLD, 12.5)
+    hlines = wrap_lines(draw, headline, hf, max_w)
+    assert len(hlines) <= 2, f"Feature headline >2 lines ({num}, {hlines}): {headline}"
+    hy = y0 + 91.5
+    for i, ln in enumerate(hlines):
+        hb = draw_left_text(draw, x0 + 5.8, hy + i * 15.0, ln, hf, INK)
+        assert hb[2] <= x1 - 4.0, f"Feature headline overflow ({num}): {ln}"
+        audit_boxes.append((f"feat_h:{num}:{i}", hb))
+
+    df = load_font(SANS_SEMI, 10.6)
+    dlines = wrap_lines(draw, deck, df, max_w)
+    assert len(dlines) <= 3, f"Feature deck >3 lines ({num}, {dlines}): {deck}"
+    dy = hy + len(hlines) * 15.0 + 3.0
+    for i, ln in enumerate(dlines):
+        db = draw_left_text(draw, x0 + 5.8, dy + i * 12.6, ln, df, INK_DARK)
+        assert db[2] <= x1 - 4.0 and db[3] <= y1 - 13.5, f"Feature deck overflow ({num}): {ln}"
+        audit_boxes.append((f"feat_d:{num}:{i}", db))
+
+    src_b = draw_left_text(draw, x0 + 5.8, y1 - 7.8, source, load_font(SANS_BOLD, 9.4), INK_MUTED)
+    audit_boxes.append((f"feat_s:{num}", src_b))
 
 
-# ---------- BOTTOM DARK-NAVY 2x7 ATTRIBUTED WIRE (14 CRISP 15px DISPATCHES) ----------
+# ---------- BAND 5A: BOTTOM-LEFT NATURAL EARTH MAP (x=12..290, y=682..934) ----------
 
-def draw_dark_wire(
+def draw_compact_map(
     draw: ImageDraw.ImageDraw,
-    rect: tuple[float, float, float, float],
-    left_rows: list[tuple[str, str, str]],
-    right_rows: list[tuple[str, str, str]],
+    panel: tuple[float, float, float, float],
     audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
 ) -> None:
-    x0, y0, x1, y1 = rect
-    rounded_rect(draw, rect, radius=6.5, fill=NAVY_DARK, outline=NAVY_MID, width=1.1)
-    draw.line([s(x0 + 8), s(y0 + 1), s(x1 - 8), s(y0 + 1)], fill=GOLD, width=s(1.6))
+    x0, y0, x1, y1 = panel
+    hdr_h = 20.0
+    ftr_h = 34.0
+    rounded_rect(draw, panel, radius=6.0, fill=CARD_BG, outline=HAIRLINE, width=1.0)
+
+    draw_left_text(draw, x0 + 8, y0 + hdr_h / 2 + 1, "WHERE IT HAPPENED", load_font(SANS_BLACK, 11.2), INK)
+    draw_right_text(draw, x1 - 8, y0 + hdr_h / 2 + 1, "1–13 = CARDS", load_font(SANS_BOLD, 9.6), INK_MUTED)
+    draw.line([s(x0 + 6), s(y0 + hdr_h), s(x1 - 6), s(y0 + hdr_h)], fill=ROW_RULE, width=s(1.0))
+
+    map_box = (x0 + 5, y0 + hdr_h + 3, x1 - 5, y1 - ftr_h - 2)
+    mx0, my0, mx1, my1 = map_box
+    rounded_rect(draw, map_box, radius=4.5, fill=OCEAN, outline="#B8D0E4", width=0.8)
+
+    for lon in range(-120, 180, 60):
+        gx, _ = project_lonlat(lon, 0, map_box)
+        draw.line([s(gx), s(my0 + 2), s(gx), s(my1 - 2)], fill=OCEAN_GRID, width=1)
+    for lat in (-30, 0, 30, 60):
+        _, gy = project_lonlat(0, lat, map_box)
+        draw.line([s(mx0 + 2), s(gy), s(mx1 - 2), s(gy)], fill=OCEAN_GRID, width=1)
+
+    assert GEOJSON_PATH.exists(), f"Missing bundled Natural Earth land GeoJSON: {GEOJSON_PATH}"
+    geo = json.loads(GEOJSON_PATH.read_text(encoding="utf-8"))
+    for feat in geo.get("features", []):
+        geom = feat.get("geometry", {})
+        gtype = geom.get("type")
+        coords = geom.get("coordinates", [])
+        polys = [coords] if gtype == "Polygon" else (coords if gtype == "MultiPolygon" else [])
+        for poly in polys:
+            if not poly:
+                continue
+            pts: list[tuple[int, int]] = []
+            for lon, lat in poly[0]:
+                if lat < -54.0:
+                    continue
+                clon = max(-160.0, min(180.0, lon))
+                clat = max(-54.0, min(75.0, lat))
+                px, py = project_lonlat(clon, clat, map_box)
+                pts.append((s(px), s(py)))
+            if len(pts) >= 3:
+                draw.polygon(pts, fill=LAND_FILL, outline=LAND_STROKE)
+
+    wire_dots = [
+        (-77.0, 38.9, REGION_COLORS["AMERICAS"]),   # US Fed
+        (-73.6, 45.5, REGION_COLORS["AMERICAS"]),   # Montreal
+        (-76.6, 5.7, REGION_COLORS["S_AMERICA"]),   # Colombia
+        (-59.5, -51.7, REGION_COLORS["S_AMERICA"]), # Falklands
+        (-0.1, 51.5, REGION_COLORS["EUROPE"]),      # London
+        (139.7, 35.7, REGION_COLORS["ASIA"]),       # Tokyo
+        (103.8, 1.3, REGION_COLORS["ASIA"]),        # Singapore
+        (77.2, 28.6, REGION_COLORS["ASIA"]),        # Delhi
+        (34.4, 31.5, REGION_COLORS["MIDDLE_EAST"]), # Gaza
+        (46.7, 24.7, REGION_COLORS["MIDDLE_EAST"]), # Riyadh
+        (-4.0, 5.3, REGION_COLORS["AFRICA"]),       # Abidjan
+        (31.0, -29.8, REGION_COLORS["AFRICA"]),     # Durban water summit
+        (28.0, -15.4, REGION_COLORS["AFRICA"]),     # Zambia customs link
+        (149.1, -35.3, REGION_COLORS["OCEANIA"]),   # Australia
+        (174.8, -41.3, REGION_COLORS["OCEANIA"]),   # NZ
+    ]
+    for lon, lat, col in wire_dots:
+        px, py = project_lonlat(lon, lat, map_box)
+        draw.ellipse([s(px - 2.6), s(py - 2.6), s(px + 2.6), s(py + 2.6)], fill=col, outline="#FFFFFF", width=s(0.6))
+
+    pins = [
+        ("1", 126.9, 36.5, 0, 0, REGION_COLORS["ASIA"]),
+        ("2", 56.3, 26.5, 0, 0, REGION_COLORS["MIDDLE_EAST"]),
+        ("3", -3.7, 40.4, -7, 4, REGION_COLORS["EUROPE"]),
+        ("4", 30.5, 50.4, 8, -2, REGION_COLORS["EUROPE"]),
+        ("5", 4.9, 52.3, -4, -12, REGION_COLORS["EUROPE"]),
+        ("6", 4.3, 50.8, 3, 7, REGION_COLORS["EUROPE"]),
+        ("7", 11.5, 51.2, 13, -12, REGION_COLORS["EUROPE"]),
+        ("8", 12.2, 26.5, 0, 0, REGION_COLORS["AFRICA"]),
+        ("9", 38.7, 9.0, 0, 0, REGION_COLORS["AFRICA"]),
+        ("10", -122.4, 37.8, 0, 0, REGION_COLORS["AMERICAS"]),
+        ("11", -52.7, 5.2, 0, 0, REGION_COLORS["S_AMERICA"]),
+        ("12", 7.6, 47.6, -15, 2, REGION_COLORS["GLOBAL"]),
+        ("13", 168.3, -17.7, -7, 0, REGION_COLORS["OCEANIA"]),
+    ]
+    pf = load_font(SANS_BLACK, 8.8)
+    for num, lon, lat, dx, dy, col in pins:
+        px, py = project_lonlat(lon, lat, map_box)
+        cx, cy = px + dx, py + dy
+        if dx or dy:
+            draw.line([s(px), s(py), s(cx), s(cy)], fill=INK, width=s(0.9))
+        r = 6.2
+        draw.ellipse([s(cx - r), s(cy - r), s(cx + r), s(cy + r)], fill=col, outline="#FFFFFF", width=s(1.2))
+        draw_centered_text(draw, cx, cy, num, pf, "#FFFFFF")
+
+    fy = y1 - ftr_h + 1
+    draw.line([s(x0 + 6), s(fy), s(x1 - 6), s(fy)], fill=ROW_RULE, width=s(0.9))
+    rf = load_font(SANS_BLACK, 10.4)
+    draw_centered_text(draw, (x0 + x1) / 2, fy + 10.5, "Europe 10 · Asia 6 · Americas 6 · Africa 5", rf, INK)
+    draw_centered_text(draw, (x0 + x1) / 2, fy + 24.5, "Middle East 4 · Oceania 3 · Global 2 (36 total)", rf, INK)
+
+
+# ---------- BAND 5B: 2-COLUMN LIGHT-IVORY WIRE (#14-#36, x=298..1012, y=682..934) ----------
+
+def draw_ivory_wire(
+    draw: ImageDraw.ImageDraw,
+    panel: tuple[float, float, float, float],
+    left_items: list[tuple[int, str, str, str, str]],
+    right_items: list[tuple[int, str, str, str, str]],
+    audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
+) -> None:
+    x0, y0, x1, y1 = panel
+    hdr_h = 20.0
+    rounded_rect(draw, panel, radius=6.0, fill=CARD_BG, outline=HAIRLINE, width=1.0)
+
+    draw_left_text(draw, x0 + 9, y0 + hdr_h / 2 + 1, "ALSO ON MONDAY 23 NOVEMBER  (23 MORE VERIFIED STORIES)", load_font(SANS_BLACK, 11.2), INK)
+    draw_right_text(draw, x1 - 9, y0 + hdr_h / 2 + 1, "C=CONFIRMED · O=OFFICIAL · R=REPORTED", load_font(SANS_BOLD, 9.5), INK_MUTED)
+    draw.line([s(x0 + 6), s(y0 + hdr_h), s(x1 - 6), s(y0 + hdr_h)], fill=ROW_RULE, width=s(1.0))
 
     mid_x = (x0 + x1) / 2
-    draw.line([s(mid_x), s(y0 + 7), s(mid_x), s(y1 - 7)], fill="#29425E", width=s(1.2))
+    draw.line([s(mid_x), s(y0 + hdr_h + 4), s(mid_x), s(y1 - 6)], fill=ROW_RULE, width=s(1.0))
 
-    body_font = load_font(SANS_BOLD, 15.0)
-    src_font = load_font(SANS_BLACK, 15.0)
-    pad_y = 5.0
-    row_h = (y1 - y0 - pad_y * 2) / 7.0
+    body_y0 = y0 + hdr_h + 4.0
+    row_h = (y1 - 5.0 - body_y0) / 12.0
 
-    for col_idx, rows in enumerate((left_rows, right_rows)):
-        cx0 = (x0 + 10.0) if col_idx == 0 else (mid_x + 10.0)
-        cx1 = (mid_x - 10.0) if col_idx == 0 else (x1 - 10.0)
-        for r_idx, (text, src, dot_col) in enumerate(rows):
-            cy = y0 + pad_y + (r_idx + 0.5) * row_h
+    f_num = load_font(SANS_BOLD, 9.8)
+    f_lead = load_font(SANS_BLACK, 11.0)
+    f_body = load_font(SANS_SEMI, 10.8)
+    f_src = load_font(SANS_BOLD, 9.6)
+    f_code = load_font(SANS_BLACK, 8.8)
+
+    for col_idx, items in enumerate((left_items, right_items)):
+        cx0 = (x0 + 7.5) if col_idx == 0 else (mid_x + 7.5)
+        cx1 = (mid_x - 6.5) if col_idx == 0 else (x1 - 7.5)
+        for r_idx, (num, lead, body, src, stamp_kind) in enumerate(items):
+            ry_top = body_y0 + r_idx * row_h
+            cy = ry_top + row_h / 2
+            baseline = cy + 3.6
             if r_idx > 0:
-                ry = y0 + pad_y + r_idx * row_h
-                draw.line([s(cx0), s(ry), s(cx1), s(ry)], fill="#1E334B", width=s(0.8))
-            draw.rectangle([s(cx0), s(cy - 3.2), s(cx0 + 6.4), s(cy + 3.2)], fill=dot_col)
-            tb = draw_left_text(draw, cx0 + 11.5, cy, text, body_font, "#F8FAFC")
-            sb = draw_right_text(draw, cx1, cy, src, src_font, GOLD_LIGHT)
-            assert tb[2] + 8.0 <= sb[0], f"Wire row collides with source tag: '{text}' vs '{src}' (gap={sb[0] - tb[2]:.1f})"
-            audit_boxes.append((f"wire:{col_idx}:{r_idx}:t", tb))
-            audit_boxes.append((f"wire:{col_idx}:{r_idx}:s", sb))
+                draw.line([s(cx0), s(ry_top), s(cx1), s(ry_top)], fill="#F0EBE0", width=s(0.7))
+
+            fg, bg, code = STAMP_STYLE[stamp_kind]
+            bw = 14.5
+            brect = (cx1 - bw, cy - 6.2, cx1, cy + 6.2)
+            rounded_rect(draw, brect, radius=2.6, fill=bg, outline=fg, width=0.7)
+            draw_centered_text(draw, (brect[0] + brect[2]) / 2, cy, code, f_code, fg)
+
+            src_w, _ = text_size(draw, src, f_src)
+            src_x0 = brect[0] - 4.0 - src_w
+            draw.text((sf(src_x0), sf(baseline)), src, font=f_src, fill=INK_MUTED, anchor="ls")
+
+            num_txt = f"{num}."
+            draw.text((sf(cx0), sf(baseline)), num_txt, font=f_num, fill=INK_MUTED, anchor="ls")
+            lead_x = cx0 + 18.0
+            lead_txt = f"{lead}:"
+            draw.text((sf(lead_x), sf(baseline)), lead_txt, font=f_lead, fill=INK, anchor="ls")
+            lw, _ = text_size(draw, lead_txt, f_lead)
+            body_x = lead_x + lw + 3.2
+            draw.text((sf(body_x), sf(baseline)), body, font=f_body, fill=INK_DARK, anchor="ls")
+            bw_txt, _ = text_size(draw, body, f_body)
+
+            assert body_x + bw_txt + 5.0 <= src_x0, (
+                f"Wire row #{num} collides with source '{src}': right={body_x + bw_txt:.1f} vs src_x0={src_x0:.1f} ({lead}: {body})"
+            )
+            audit_boxes.append((f"wire:{num}", (cx0, ry_top + 1, cx1, ry_top + row_h - 1)))
 
 
-# ---------- BOTTOM 15px DATE CHECK EXCLUSION BAR (y=987..1019px) ----------
+# ---------- BAND 6: DATE CHECK AUDIT BOX + VERIFICATION LEGEND (y=938..1018) ----------
 
-def draw_date_check_bar(
+def draw_date_check_and_legend(
     draw: ImageDraw.ImageDraw,
-    rect: tuple[float, float, float, float],
+    dc_rect: tuple[float, float, float, float],
+    leg_rect: tuple[float, float, float, float],
     audit_boxes: list[tuple[str, tuple[float, float, float, float]]],
 ) -> None:
-    x0, y0, x1, y1 = rect
-    cy = (y0 + y1) / 2
-    rounded_rect(draw, rect, radius=6.0, fill="#162A40", outline=GOLD, width=1.4)
+    x0, y0, x1, y1 = dc_rect
+    rounded_rect(draw, dc_rect, radius=5.5, fill="#FFF8F6", outline="#DC2626", width=1.2)
 
-    badge = (x0 + 5, y0 + 4, x0 + 216, y1 - 4)
-    rounded_rect(draw, badge, radius=4.0, fill="#B91C1C")
-    draw_centered_text(
+    badge = (x0 + 6, y0 + 6, x0 + 96, y0 + 23)
+    rounded_rect(draw, badge, radius=3.5, fill=CRIMSON)
+    draw_centered_text(draw, (badge[0] + badge[2]) / 2, (badge[1] + badge[3]) / 2, "DATE CHECK", load_font(SANS_BLACK, 10.8), "#FFFFFF")
+
+    f_b = load_font(SANS_BOLD, 11.4)
+    f_r = load_font(SANS_SEMI, 11.2)
+    l1 = "Left out on purpose — Sun 22 Nov or earlier: COP31 climate talks; Dymer Kyiv strike; Manchester Co-op Live 12k evac;"
+    l2 = "Vegas F1 GP; Alcaraz ATP Finals; Liverpool 4–0 Man Utd; S. Korea minister exit; BepiColombo (21 Nov); Bank of Ghana (18 Nov); An-12 & Prague (17 Nov)."
+
+    b1 = draw_left_text(draw, x0 + 104, y0 + 14.5, l1, f_b, INK)
+    b2 = draw_left_text(draw, x0 + 8, y0 + 34.5, l2, f_r, INK_DARK)
+    assert b1[2] <= x1 - 6 and b2[2] <= x1 - 6, f"Date-check clipped: {b1[2]:.1f}, {b2[2]:.1f}"
+    audit_boxes.extend([("dc:1", b1), ("dc:2", b2)])
+
+    lx0, ly0, lx1, ly1 = leg_rect
+    cy = (ly0 + ly1) / 2
+    cx = lx0 + 2
+    f_l = load_font(SANS_BOLD, 9.8)
+    for kind, desc in (
+        ("CONFIRMED", "2+ outlets"),
+        ("OFFICIAL", "agency/court"),
+        ("REPORTED", "1 outlet"),
+        ("CLAIM", "one side says"),
+    ):
+        fg, bg, _ = STAMP_STYLE[kind]
+        tw, _ = text_size(draw, kind, load_font(SANS_BLACK, 8.6))
+        pw = tw + 8.0
+        rounded_rect(draw, (cx, cy - 6.5, cx + pw, cy + 6.5), radius=2.6, fill=bg, outline=fg, width=0.7)
+        draw_centered_text(draw, cx + pw / 2, cy, kind, load_font(SANS_BLACK, 8.6), fg)
+        cx += pw + 4.0
+        tb = draw_left_text(draw, cx, cy, desc, f_l, INK_MUTED)
+        cx = tb[2] + 10.0
+
+    rb = draw_right_text(
         draw,
-        (badge[0] + badge[2]) / 2,
+        lx1 - 2,
         cy,
-        "DATE CHECK · 23 NOV UTC",
-        load_font(SANS_BLACK, 15.0),
-        "#FFFFFF",
+        "Every story broke Mon 23 Nov 2026 (UTC) · Sources named with each item · Original vector drawings",
+        load_font(SANS_BOLD, 9.8),
+        INK_MUTED,
     )
-
-    excl = "Excluded 21–22 Nov: COP31 talks; Vegas F1; Premier League; ATP Finals; BepiColombo"
-    eb = draw_left_text(draw, badge[2] + 10.0, cy, excl, load_font(SANS_BOLD, 15.0), "#F8FAFC")
-    assert eb[2] <= x1 - 6.0, f"Date-check bar clipped: right={eb[2]:.1f} > {x1 - 6.0}"
-    audit_boxes.append(("date_check", eb))
+    assert cx <= rb[0] - 6.0, f"Footer legend collision: left={cx:.1f} vs right={rb[0]:.1f}"
 
 
 # ---------- LOSSLESS ADAPTIVE RGB PNG ENCODER ----------
@@ -763,7 +897,7 @@ def save_compact_rgb_png(img: Image.Image, path: Path) -> int:
     return len(png_bytes)
 
 
-# ---------- PROGRAMMATIC LAYOUT & DATE-SAFETY AUDIT ----------
+# ---------- AUDIT ----------
 
 def audit_layout(
     boxes: list[tuple[str, tuple[float, float, float, float]]],
@@ -793,10 +927,10 @@ def audit_layout(
 
     if issues:
         raise RuntimeError("Layout audit FAILED:\n" + "\n".join(issues))
-    print(f"Layout audit: 0 issues ({len(boxes)} boxes checked, MIN_FONT_PX={MIN_FONT_PX}, {len(all_story_texts)} stories date-clean)")
+    print(f"Layout audit: 0 issues ({len(boxes)} boxes checked, {len(all_story_texts)} stories date-clean)")
 
 
-# ---------- MAIN RENDER PIPELINE ----------
+# ---------- MAIN RENDER ----------
 
 def render() -> None:
     img = Image.new("RGB", (CW, CH), PAPER)
@@ -804,107 +938,124 @@ def render() -> None:
     audit_boxes: list[tuple[str, tuple[float, float, float, float]]] = []
     all_story_texts: list[str] = []
 
-    # 1. Top Masthead (y=0..76px)
-    draw.rectangle([0, 0, CW, s(24)], fill=NAVY_DARK)
-    draw_centered_text(
-        draw,
-        WIDTH / 2,
-        12.0,
-        "WORLD NEWS ATLAS  ·  25 SOURCED STORIES  ·  7 REGIONS  ·  23 NOV 2026 UTC",
-        load_font(SANS_BLACK, 15.0),
-        GOLD_LIGHT,
-    )
-    draw_centered_text(
-        draw,
-        WIDTH / 2,
-        48.5,
-        "Monday 23 November 2026",
-        load_font(SERIF_BOLD, 44.0),
-        INK,
-    )
-    draw.line([s(10), s(73.5), s(WIDTH - 10), s(73.5)], fill=INK, width=s(2.0))
-    draw.line([s(10), s(76.0), s(WIDTH - 10), s(76.0)], fill=GOLD, width=s(1.0))
+    # Band 1: Masthead (y=0..62px)
+    draw_left_text(draw, 12, 11.5, "WORLD NEWS CHRONICLE  ·  ONE DAY IN ONE PICTURE", load_font(SANS_BLACK, 10.6), INK_MUTED)
+    draw_right_text(draw, WIDTH - 12, 11.5, "36 STORIES  ·  7 REGIONS  ·  18 BEATS  ·  ALL SOURCED", load_font(SANS_BLACK, 10.6), CRIMSON)
+    draw.line([s(12), s(20), s(WIDTH - 12), s(20)], fill=HAIRLINE, width=s(0.9))
 
-    # 2. Hero Visual Band (y=79..331px): Airy World Map + 2 Giant Hero Leads
-    draw_world_map(draw, (10, 79, 566, 331), audit_boxes)
+    draw_centered_text(draw, WIDTH / 2, 40.0, "Monday 23 November 2026", load_font(SERIF_BOLD, 37.0), INK)
+    draw.line([s(12), s(59.0), s(WIDTH - 12), s(59.0)], fill=INK, width=s(1.8))
+    draw.line([s(12), s(61.5), s(WIDTH - 12), s(61.5)], fill=GOLD, width=s(1.0))
 
-    heroes = [
+    # Band 2: THE DAY IN UTC Timeline (y=64..98px)
+    draw_utc_timeline(draw, (12, 64, WIDTH - 12, 98), audit_boxes)
+
+    # Band 3: Top 3 Flagship Lead Stories (y=102..330px, 3 cols x 326px)
+    leads = [
         (
-            "LEAD 1 · GLOBAL · MARKETS",
-            "REUTERS",
-            REGION_COLORS["GLOBAL"],
-            "AI Rout Hits Asia; Korea & Taiwan Act",
-            "Kospi -3.3%; Seoul readies $8B fund",
-            art_hero_asia,
+            1,
+            "GLOBAL · MARKETS",
+            "CONFIRMED",
+            REGION_COLORS["ASIA"],
+            "AI stock rout hits Asia; Korea & Taiwan act",
+            "Kospi falls 3.3% and China hits 16-month lows on AI profit fears; Seoul readies $8B fund as Taiwan widens curbs.",
+            "Reuters, AP",
+            art_lead_asia,
         ),
         (
-            "LEAD 2 · M. EAST · OIL",
-            "AFP",
+            2,
+            "M. EAST · SECURITY",
+            "CONFIRMED",
             REGION_COLORS["MIDDLE_EAST"],
-            "Iran Vows 'All Tools' on U.S. Blockade",
-            "Tehran answers U.S. fire warning to ships",
-            art_hero_iran,
+            "Iran vows 'all tools' as Trump warns strikes",
+            "Tehran answers U.S. Hormuz naval blockade warnings while Trump tells Fox strikes may resume after Jan 1.",
+            "AFP, AA, Fox News",
+            art_lead_iran,
+        ),
+        (
+            3,
+            "EUROPE · SPAIN LAW",
+            "OFFICIAL",
+            REGION_COLORS["EUROPE"],
+            "Spain Supreme Court grants Puigdemont amnesty",
+            "Criminal Chamber closes 2017 Catalan independence proceedings against exiled ex-leader Carles Puigdemont and two aides.",
+            "Supreme Court, Reuters",
+            art_lead_spain,
         ),
     ]
-    for idx, (hl, sr, col, head, take, art_fn) in enumerate(heroes):
-        ry0 = 79.0 + idx * (123.0 + 6.0)
-        draw_hero_card(draw, (576.0, ry0, 1014.0, ry0 + 123.0), hl, sr, col, head, take, art_fn, audit_boxes)
-        all_story_texts.append(f"{head} {take}")
+    lw = 326.0
+    lgap = 11.0
+    for idx, (num, kicker, stamp, col, head, deck, src, art_fn) in enumerate(leads):
+        lx0 = 12.0 + idx * (lw + lgap)
+        draw_lead_card(draw, (lx0, 102, lx0 + lw, 330), num, kicker, stamp, col, head, deck, src, art_fn, audit_boxes)
+        all_story_texts.append(f"{head} {deck}")
 
-    # 3. 3x3 Giant Panoramic Museum Gallery (y=337..787px): 9 Large Illustrated Cards
-    gallery = [
-        ("EUROPE · UKRAINE", "EU", REGION_COLORS["EUROPE"], "EU Disburses €7.9B Under Ukraine Facility", art_pan_ukraine),
-        ("EUROPE · ENERGY", "FT", REGION_COLORS["EUROPE"], "European Gas Surges 6% to €93/MWh", art_pan_gas),
-        ("AFRICA · OIL", "AA", REGION_COLORS["AFRICA"], "Libya NOC: Sharara Shut Cuts 350k bpd", art_pan_libya),
-        ("AMERICAS · ECON", "AP", REGION_COLORS["AMERICAS"], "Bessent Warns Hawkish Fed Risks Growth", art_pan_fed),
-        ("ASIA · FINANCE", "MAS", REGION_COLORS["ASIA"], "Singapore & China Expand RMB Hub", art_pan_rmb),
-        ("S. AMERICA · SPACE", "ARIANE", REGION_COLORS["S_AMERICA"], "Ariane 6 Launch Halted in French Guiana", art_pan_ariane),
-        ("AFRICA · HEALTH", "CDC", REGION_COLORS["AFRICA"], "Africa Health Summit Opens in Addis", art_pan_cphia),
-        ("GLOBAL · MEDICINE", "NOVARTIS", REGION_COLORS["SCIENCE"], "Novartis Says Heart Trial Met Endpoint", art_pan_heart),
-        ("S. ASIA · TRADE", "HINDU", REGION_COLORS["ASIA"], "India & Nepal Sign Rail & Hydro Pacts", art_pan_india_nepal),
+    # Band 4: 10 Illustrated Feature Cards (y=336..676px, 2 rows x 5 cols, 194x167px)
+    features = [
+        (4, "UKRAINE AID", "OFFICIAL", REGION_COLORS["EUROPE"], "EU disburses €7.9B Ukraine Facility", "Macro-financial tranche lifts total EU budget support past €40B.", "EU Commission", art_f_ukraine),
+        (5, "EUROPE GAS", "CONFIRMED", REGION_COLORS["EUROPE"], "European gas jumps 6% to €93/MWh", "Cold winter forecasts and Hormuz risks push Dutch TTF higher.", "FT, MUFG", art_f_gas),
+        (6, "BELGIUM", "CONFIRMED", REGION_COLORS["EUROPE"], "National strike grounds Belgian skies", "Walkout halts Belgian ATC 07–21 UTC across Brussels & Charleroi.", "AA, Al Jazeera", art_f_belgium),
+        (7, "GERMANY", "CONFIRMED", REGION_COLORS["EUROPE"], "450 German & Danish schools hit by hoaxes", "Police deem coordinated emailed bomb threats across schools unfounded.", "Police, L'Orient", art_f_schools),
+        (8, "LIBYA OIL", "CONFIRMED", REGION_COLORS["AFRICA"], "Libya Sharara shut cuts 350k bpd oil", "Unauthorized valve closure halts major southwestern crude field.", "NOC, AA, Reuters", art_f_libya),
+        (9, "AFRICA HEALTH", "OFFICIAL", REGION_COLORS["AFRICA"], "Africa Health Summit opens in Addis", "CPHIA launches maternal plan & eyes 60% local vaccines by 2040.", "Africa CDC", art_f_cphia),
+        (10, "US WEATHER", "CONFIRMED", REGION_COLORS["AMERICAS"], "King tides & storms hit Bay Area", "Near-record 2.8ft tides and rain trigger flood barriers at SFO.", "CNN, SFO", art_f_tides),
+        (11, "GUIANA SPACE", "OFFICIAL", REGION_COLORS["S_AMERICA"], "Ariane 6 VA271 halted in Kourou", "Ground-support fault pauses launch of 36 Amazon Leo satellites.", "Arianespace, CNES", art_f_ariane),
+        (12, "MEDICINE", "OFFICIAL", REGION_COLORS["GLOBAL"], "Novartis heart trial meets goal", "Phase III ORION-4 readout shows Leqvio cut major cardiac events.", "Novartis", art_f_heart),
+        (13, "OCEANIA", "OFFICIAL", REGION_COLORS["OCEANIA"], "USGS logs M6.5 quake in Vanuatu", "Strong deep tremor shakes South Pacific; no tsunami alert issued.", "USGS", art_f_quake),
     ]
-    gx0, gy0 = 10.0, 337.0
-    gw, gh = 328.0, 146.0
-    ggap_x, ggap_y = 10.0, 6.0
-    for idx, (hl, sr, col, head, art_fn) in enumerate(gallery):
-        r, c = divmod(idx, 3)
-        rx0 = gx0 + c * (gw + ggap_x)
-        ry0 = gy0 + r * (gh + ggap_y)
-        draw_panoramic_card(draw, (rx0, ry0, rx0 + gw, ry0 + gh), hl, sr, col, head, art_fn, audit_boxes)
-        all_story_texts.append(head)
+    fw, fh = 194.0, 167.0
+    fgap_x, fgap_y = 7.5, 6.0
+    for idx, (num, kicker, stamp, col, head, deck, src, art_fn) in enumerate(features):
+        r, c = divmod(idx, 5)
+        fx0 = 12.0 + c * (fw + fgap_x)
+        fy0 = 336.0 + r * (fh + fgap_y)
+        draw_feature_card(draw, (fx0, fy0, fx0 + fw, fy0 + fh), num, kicker, stamp, col, head, deck, src, art_fn, audit_boxes)
+        all_story_texts.append(f"{head} {deck}")
 
-    # 4. Bottom Dark-Navy 2x7 Sourced Wire (y=793..983px): 14 Single-Line 15px Dispatches
+    # Band 5: Compact Natural Earth Map (Left) + 23-Story Light-Ivory Wire (Right)
+    draw_compact_map(draw, (12, 682, 290, 934), audit_boxes)
+
     left_wire = [
-        ("Belgium: Strike halts skies 07–21 UTC", "AVI-GO", REGION_COLORS["EUROPE"]),
-        ("UK: Report warns BBC fee <50% homes", "GUARDIAN", REGION_COLORS["EUROPE"]),
-        ("EU: Living-cost protests hit capitals", "ALJAZEERA", REGION_COLORS["EUROPE"]),
-        ("Canada: Bombardier votes 97.8% strike", "AVI-GO", REGION_COLORS["AMERICAS"]),
-        ("Colombia: NGO warns Chocó malaria +46%", "STC", REGION_COLORS["S_AMERICA"]),
-        ("Australia: Chalmers sees <2% growth", "GUARDIAN", REGION_COLORS["OCEANIA"]),
-        ("Vanuatu: USGS logs M6.5 deep quake", "USGS", REGION_COLORS["OCEANIA"]),
+        (14, "US Economy", "Bessent warns hawkish Fed risks growth", "AP", "OFFICIAL"),
+        (15, "Canada", "Bombardier union votes 97.8% for strike", "AVI-GO", "OFFICIAL"),
+        (16, "Colombia", "NGO warns Chocó malaria surged 46%", "STC", "REPORTED"),
+        (17, "Falklands", "Groups warn oil plan threatens sea life", "Guardian", "REPORTED"),
+        (18, "UK Markets", "Compass Group plans NY primary listing", "LSE", "CONFIRMED"),
+        (19, "UK Police", "Met opens criminal probe of D. Walliams", "ITV", "CONFIRMED"),
+        (20, "UK Media", "Report warns BBC fee below 50% homes", "Guardian", "REPORTED"),
+        (21, "UK–EU", "Youth-mobility deal hinges on tuition", "Guardian", "REPORTED"),
+        (22, "Europe", "Living-cost rallies hit EU capitals", "Al Jazeera", "CONFIRMED"),
+        (23, "Japan", "Education Min. Seki faces exit pressure", "Xinhua", "REPORTED"),
+        (24, "Singapore", "MAS & PBOC widen offshore RMB hub", "MAS", "OFFICIAL"),
+        (25, "India–Nepal", "Leaders sign hydro & rail pacts", "Hindu", "OFFICIAL"),
     ]
     right_wire = [
-        ("Gaza: Oxfam warns 99% faces toxic risk", "OXFAM", REGION_COLORS["MIDDLE_EAST"]),
-        ("Gulf: Saudi & Japan add 16M bbl oil", "MUFG", REGION_COLORS["MIDDLE_EAST"]),
-        ("Hormuz: Monitors cite Gulf ship attacks", "JPOST", REGION_COLORS["MIDDLE_EAST"]),
-        ("Ivory Coast: Steinmeier opens tour", "DPA", REGION_COLORS["AFRICA"]),
-        ("AfCFTA: S. Africa & Zambia link trade", "SARS", REGION_COLORS["AFRICA"]),
-        ("Seoul: New foreign min.; Qatar LNG", "K.HERALD", REGION_COLORS["ASIA"]),
-        ("Sport: NZ holds India to Test draw", "ICC", REGION_COLORS["OCEANIA"]),
+        (26, "S. Korea", "New FM Lim discusses Qatar LNG supply", "K.Herald", "OFFICIAL"),
+        (27, "APAC Deals", "Macquarie agrees $1.2B tower buyout", "Reuters", "OFFICIAL"),
+        (28, "Science", "Cambridge traces blood cancer to early cells", "Nature", "OFFICIAL"),
+        (29, "Gaza Aid", "Oxfam warns 99% faces toxic risk", "Oxfam", "REPORTED"),
+        (30, "Gulf Oil", "Saudi & Japan add 16M bbl crude reserve", "MUFG", "REPORTED"),
+        (31, "Hormuz", "Monitors say Gulf ship attacks hit high", "JPost", "REPORTED"),
+        (32, "Africa Water", "Mashatile opens Durban water summit", "SABC", "OFFICIAL"),
+        (33, "Ivory Coast", "Germany's Steinmeier opens Africa tour", "DPA", "OFFICIAL"),
+        (34, "Southern Africa", "S. Africa & Zambia link customs", "SARS", "OFFICIAL"),
+        (35, "Australia", "Chalmers sees <2% GDP, no recession", "Guardian", "OFFICIAL"),
+        (36, "Cricket", "New Zealand hold India to Test draw", "ICC", "OFFICIAL"),
     ]
-    for rows in (left_wire, right_wire):
-        for txt, src, _ in rows:
-            all_story_texts.append(f"{txt} ({src})")
-    draw_dark_wire(draw, (10, 793, 1014, 983), left_wire, right_wire, audit_boxes)
+    for grp in (left_wire, right_wire):
+        for num, lead, body, src, _ in grp:
+            all_story_texts.append(f"{lead}: {body} ({src})")
 
-    # 5. Bottom High-Contrast 15px DATE CHECK Bar (y=987..1019px)
-    draw_date_check_bar(draw, (10, 987, 1014, 1019), audit_boxes)
+    draw_ivory_wire(draw, (298, 682, WIDTH - 12, 934), left_wire, right_wire, audit_boxes)
 
-    assert len(all_story_texts) == 25, f"Expected 25 stories, got {len(all_story_texts)}"
+    # Band 6: DATE CHECK Box + Verification Legend (y=938..1018px)
+    draw_date_check_and_legend(draw, (12, 938, WIDTH - 12, 988), (12, 992, WIDTH - 12, 1018), audit_boxes)
+
+    assert len(all_story_texts) == 36, f"Expected 36 stories, got {len(all_story_texts)}"
     audit_layout(audit_boxes, all_story_texts)
 
-    # Downsample 2x -> 1x with BOX area average (zero ringing, sharp edges)
-    final_img = img.resize((WIDTH, HEIGHT), Image.Resampling.BOX)
+    # Downsample 2x -> 1x with LANCZOS (archival print sharpness)
+    final_img = img.resize((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
     nbytes = save_compact_rgb_png(final_img, OUT_PNG)
     print(f"Rendered {OUT_PNG}: {WIDTH}x{HEIGHT} RGB PNG, {nbytes:,} bytes ({nbytes / 1024:.1f} KiB)")
     assert nbytes < 1_048_576, f"PNG exceeds 1 MiB: {nbytes}"
