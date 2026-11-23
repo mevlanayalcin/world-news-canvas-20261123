@@ -4,25 +4,26 @@
 [![Rank](https://make.fun/badge/news-image-20261123/mevlanayalcin/world-news-canvas-20261123/rank.svg)](https://make.fun/bounty/news-image-20261123)
 [![Reward](https://make.fun/badge/news-image-20261123/mevlanayalcin/world-news-canvas-20261123/reward.svg)](https://make.fun/bounty/news-image-20261123)
 
-An illustrated one-page world news atlas summing up **Monday 23 November 2026** in a single `1024×1024` 8-bit RGB PNG for the [make.fun `news-image-20261123`](https://make.fun/bounty/news-image-20261123) competition.
+An illustrated, strictly sourced one-page world news atlas summing up **Monday 23 November 2026** in a single `1024×1024` 8-bit RGB PNG for the [make.fun `news-image-20261123`](https://make.fun/bounty/news-image-20261123) competition. Every text element enforces `MIN_FONT_PX = 15.0` for thumbnail legibility at `300px`, every story carries an inline named outlet source, and an explicit bottom `DATE CHECK · 23 NOV UTC` bar documents excluded 21–22 Nov prior-day items.
 
-## Coverage (7 Regions · 23 Stories · 16 Beats)
+## Coverage (7 Regions · 25 Sourced Stories · 17 Beats)
 
-- **Hero Lead 1 (`Global · Markets`):** AI tech rout hits Asia; China hits 16-month low, Taiwan widens short-selling curbs, and South Korea readies an $8B rescue fund.
-- **Hero Lead 2 (`Middle East · Oil`):** Iran vows to use all available tools against the U.S. naval oil blockade as Washington warns blockade-running ships.
-- **3×3 Panoramic Museum Gallery (9 Illustrated Stories):**
-  1. `Europe · Energy` — European natural gas jumps 6% to €93/MWh on a cold-snap forecast.
-  2. `Africa · Oil` — Valve closure on Libya's Sharara pipeline cuts 350,000 bpd of output.
-  3. `Americas · Economy` — U.S. Treasury Secretary Scott Bessent warns the Federal Reserve over hawkish rate risks.
-  4. `Asia · Finance` — Singapore's MAS and China's PBOC expand bilateral RMB liquidity facilities.
-  5. `South America · Space` — Ariane 6 Flight VA271 launch halted at Kourou spaceport in French Guiana.
-  6. `Oceania · Economy` — Australian Treasurer Jim Chalmers forecasts slower growth (<2%) with no recession.
-  7. `Africa · Health` — The Africa Public Health Conference (CPHIA 2026) opens in Addis Ababa.
-  8. `Europe · Media` — Independent report warns the BBC licence fee faces a steep decline (<50% of households within a decade).
-  9. `South Asia · Diplomacy` — India and Nepal sign cross-border hydropower and connectivity pacts.
-- **2×6 Global Dispatch Band (12 Single-Line Dispatches):**
-  - National strike halts Belgian airspace · Saudi Arabia & Japan add 16M bbl oil storage · Oxfam warns Gaza faces toxic crisis · Colombia's Chocó malaria jumps 46% post-quake · Bombardier Montreal union backs strike 97.8% · Living-cost protests sweep EU cities
-  - M6.5 deep quake strikes off Vanuatu · XPENG ARIDGE completes electric tiltrotor transition flight · South Africa & Zambia link live AfCFTA border customs · Africa Water Summit opens in Durban · Egypt & Iraq hold Cairo security talks · New Zealand holds India to Wellington Test draw
+- **Hero Lead 1 (`Global · Markets` · `REUTERS`):** AI rout hits Asia; Korea & Taiwan act (`Kospi -3.3%; Seoul readies $8B fund`).
+- **Hero Lead 2 (`Middle East · Oil` · `AFP`):** Iran vows 'all tools' on U.S. oil blockade (`Tehran answers U.S. fire warning to ships`).
+- **3×3 Panoramic Museum Gallery (9 Illustrated Sourced Stories):**
+  1. `Europe · Ukraine` (`EU`) — EU disburses €7.9B under the Ukraine Facility.
+  2. `Europe · Energy` (`FT`) — European natural gas surges 6% to €93/MWh.
+  3. `Africa · Oil` (`AA`) — Libya's NOC says Sharara valve shut cuts 350k bpd.
+  4. `Americas · Economy` (`AP`) — U.S. Treasury Sec. Scott Bessent warns hawkish Fed risks growth.
+  5. `Asia · Finance` (`MAS`) — Singapore and China expand offshore RMB hub at 22nd JCBC.
+  6. `South America · Space` (`ARIANE`) — Ariane 6 launch halted in French Guiana.
+  7. `Africa · Health` (`CDC`) — Africa Public Health Summit (CPHIA 2026) opens in Addis Ababa.
+  8. `Global · Medicine` (`NOVARTIS`) — Novartis says Phase III ORION-4 heart trial met endpoint.
+  9. `South Asia · Trade` (`HINDU`) — India and Nepal sign cross-border rail and hydropower pacts.
+- **2×7 Attributed Dark-Navy Global Wire (14 Single-Line Sourced Dispatches):**
+  - Belgium airspace strike `07–21 UTC` (`AVI-GO`) · UK report warns BBC licence fee `<50%` of homes (`GUARDIAN`) · EU living-cost protests hit capitals (`ALJAZEERA`) · Canada Bombardier union votes `97.8%` strike (`AVI-GO`) · Colombia NGO warns Chocó malaria `+46%` (`STC`) · Australia Treasurer Chalmers sees `<2%` growth (`GUARDIAN`) · Vanuatu M6.5 deep quake (`USGS`)
+  - Gaza Oxfam warns `99%` faces toxic risk (`OXFAM`) · Gulf Saudi & Japan add `16M bbl` oil storage (`MUFG`) · Hormuz monitors cite Gulf ship attacks (`JPOST`) · Ivory Coast German Pres. Steinmeier opens Africa tour (`DPA`) · AfCFTA South Africa & Zambia link automated trade customs (`SARS`) · Seoul new foreign minister & Qatar LNG talks (`K.HERALD`) · Sport New Zealand holds India to Wellington Test draw (`ICC`)
+- **Date Boundary Discipline (`DATE CHECK · 23 NOV UTC`):** Explicitly excludes prior-day 21–22 Nov carryover items (`COP31 talks; Vegas F1; Premier League; ATP Finals; BepiColombo`).
 
 ## Running
 
