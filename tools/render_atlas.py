@@ -93,6 +93,7 @@ BANNED_CARRYOVER_TOKENS = (
     "blues",
     "bears",
     "ituri",
+    "€7.9b",
 )
 
 
@@ -267,18 +268,18 @@ def draw_utc_timeline(
 
     milestones = [
         ("01:00Z", "Asia AI rout & curbs", REGION_COLORS["ASIA"]),
+        ("02:41Z", "Vanuatu M6.5 quake", REGION_COLORS["OCEANIA"]),
         ("06:00Z", "Belgium flight halt", REGION_COLORS["EUROPE"]),
         ("09:00Z", "450 school hoaxes", REGION_COLORS["EUROPE"]),
-        ("10:30Z", "Spain amnesty ruling", REGION_COLORS["EUROPE"]),
-        ("12:30Z", "EU €7.9B Ukraine", REGION_COLORS["EUROPE"]),
-        ("14:00Z", "Ariane 6 VA271 hold", REGION_COLORS["S_AMERICA"]),
+        ("~10:00Z", "Ariane 6 VA271 hold", REGION_COLORS["S_AMERICA"]),
+        ("12:12Z", "Spain amnesty ruling", REGION_COLORS["EUROPE"]),
     ]
 
     tx0 = x0 + 108
     tx1 = x1 - 6
     slot_w = (tx1 - tx0) / len(milestones)
     dot_y = y0 + 11.0
-    draw.line([s(tx0 + 26), s(dot_y), s(tx1 - 26), s(dot_y)], fill="#BDB4A4", width=s(1.4))
+    draw.line([s(tx0 + 28), s(dot_y), s(tx1 - 28), s(dot_y)], fill="#BDB4A4", width=s(1.4))
 
     f_time = load_font(SANS_BLACK, 10.2)
     f_desc = load_font(SANS_BOLD, 10.8)
@@ -286,7 +287,7 @@ def draw_utc_timeline(
     for i, (utc, desc, col) in enumerate(milestones):
         sx0 = tx0 + i * slot_w
         cx = sx0 + slot_w / 2
-        prect = (cx - 26, y0 + 3.5, cx + 26, y0 + 17.5)
+        prect = (cx - 28, y0 + 3.5, cx + 28, y0 + 17.5)
         rounded_rect(draw, prect, radius=3.5, fill=col)
         draw_centered_text(draw, cx, y0 + 10.5, utc, f_time, "#FFFFFF")
         db = draw_centered_text(draw, cx, y1 - 8.0, desc, f_desc, INK)
@@ -356,19 +357,24 @@ def art_lead_spain(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, fl
 
 # ---------- 10 FEATURE CARD VECTOR ILLUSTRATIONS (184 x 58px) ----------
 
-def art_f_ukraine(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
+def art_f_cricket(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
     x0, y0, x1, y1 = box
-    rounded_rect(draw, box, radius=4.5, fill="#EFF6FF", outline="#BFDBFE", width=0.9)
-    cx, cy = x0 + 34, (y0 + y1) / 2 + 1
-    sh = [(s(cx), s(cy - 20)), (s(cx + 18), s(cy - 13)), (s(cx + 15), s(cy + 6)), (s(cx), s(cy + 20)), (s(cx - 15), s(cy + 6)), (s(cx - 18), s(cy - 13))]
-    draw.polygon(sh, fill="#1D4ED8")
-    draw.polygon([(s(cx + 16), s(cy)), (s(cx + 15), s(cy + 6)), (s(cx), s(cy + 20)), (s(cx - 15), s(cy + 6)), (s(cx - 16), s(cy))], fill="#FACC15")
-    draw.line(sh + [sh[0]], fill="#1E3A8A", width=s(1.6))
-    for i, bh in enumerate((16, 25, 34)):
-        bx = x0 + 68 + i * 18
-        rounded_rect(draw, (bx, y1 - 6 - bh, bx + 12, y1 - 6), radius=2.5, fill="#2563EB")
-        draw.ellipse([s(bx), s(y1 - 9 - bh), s(bx + 12), s(y1 - 4 - bh)], fill="#FACC15")
-    draw_plaque(draw, x1 - 4, y0 + 4, "€7.9B", "#1D4ED8", font_px=10.5, h=15.5)
+    rounded_rect(draw, box, radius=4.5, fill="#ECFDF5", outline="#A7F3D0", width=0.9)
+    # Lush green Wellington oval outfield + sandy Test pitch strip
+    draw.rectangle([s(x0 + 2), s(y1 - 20), s(x1 - 2), s(y1 - 2)], fill="#15803D")
+    draw.polygon([(s(x0 + 16), s(y1 - 4)), (s(x0 + 36), s(y1 - 20)), (s(x0 + 82), s(y1 - 20)), (s(x0 + 102), s(y1 - 4))], fill="#E5C992")
+    # Three golden cricket stumps + bails
+    for sx in (x0 + 48, x0 + 57, x0 + 66):
+        draw.rectangle([s(sx - 1.8), s(y0 + 14), s(sx + 1.8), s(y1 - 12)], fill="#D97706", outline="#92400E", width=s(0.8))
+    draw.line([s(x0 + 46), s(y0 + 13), s(x0 + 68), s(y0 + 13)], fill="#B45309", width=s(2.4))
+    # Red cricket ball with white seam
+    bx, by = x0 + 96, y0 + 26
+    draw.ellipse([s(bx - 9), s(by - 9), s(bx + 9), s(by + 9)], fill="#B91C1C", outline="#7F1D1D", width=s(1.0))
+    draw.arc([s(bx - 7), s(by - 6), s(bx + 7), s(by + 6)], start=210, end=330, fill="#F8FAFC", width=s(1.4))
+    # Dark stadium scoreboard on right
+    rounded_rect(draw, (x0 + 114, y0 + 23, x1 - 6, y1 - 10), radius=3.5, fill=NAVY, outline="#334155", width=s(1.0))
+    draw_centered_text(draw, (x0 + 114 + x1 - 6) / 2, (y0 + 23 + y1 - 10) / 2, "DAY 5", load_font(SANS_BLACK, 10.5), "#FACC15")
+    draw_plaque(draw, x1 - 4, y0 + 4, "TEST DRAW", "#92400E", font_px=9.8, h=15.5)
 
 
 def art_f_gas(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float]) -> None:
@@ -679,7 +685,6 @@ def draw_compact_map(
         (31.0, -29.8, REGION_COLORS["AFRICA"]),     # Durban water summit
         (28.0, -15.4, REGION_COLORS["AFRICA"]),     # Zambia customs link
         (149.1, -35.3, REGION_COLORS["OCEANIA"]),   # Australia
-        (174.8, -41.3, REGION_COLORS["OCEANIA"]),   # NZ
     ]
     for lon, lat, col in wire_dots:
         px, py = project_lonlat(lon, lat, map_box)
@@ -689,10 +694,10 @@ def draw_compact_map(
         ("1", 126.9, 36.5, 0, 0, REGION_COLORS["ASIA"]),
         ("2", 56.3, 26.5, 0, 0, REGION_COLORS["MIDDLE_EAST"]),
         ("3", -3.7, 40.4, -7, 4, REGION_COLORS["EUROPE"]),
-        ("4", 30.5, 50.4, 8, -2, REGION_COLORS["EUROPE"]),
+        ("4", 174.8, -41.3, -6, 0, REGION_COLORS["OCEANIA"]),
         ("5", 4.9, 52.3, -4, -12, REGION_COLORS["EUROPE"]),
-        ("6", 4.3, 50.8, 3, 7, REGION_COLORS["EUROPE"]),
-        ("7", 11.5, 51.2, 13, -12, REGION_COLORS["EUROPE"]),
+        ("6", 4.3, 50.8, 4, 6, REGION_COLORS["EUROPE"]),
+        ("7", 11.5, 51.2, 13, -10, REGION_COLORS["EUROPE"]),
         ("8", 12.2, 26.5, 0, 0, REGION_COLORS["AFRICA"]),
         ("9", 38.7, 9.0, 0, 0, REGION_COLORS["AFRICA"]),
         ("10", -122.4, 37.8, 0, 0, REGION_COLORS["AMERICAS"]),
@@ -713,8 +718,8 @@ def draw_compact_map(
     fy = y1 - ftr_h + 1
     draw.line([s(x0 + 6), s(fy), s(x1 - 6), s(fy)], fill=ROW_RULE, width=s(0.9))
     rf = load_font(SANS_BLACK, 10.4)
-    draw_centered_text(draw, (x0 + x1) / 2, fy + 10.5, "Europe 10 · Asia 6 · Americas 6 · Africa 5", rf, INK)
-    draw_centered_text(draw, (x0 + x1) / 2, fy + 24.5, "Middle East 4 · Oceania 3 · Global 2 (36 total)", rf, INK)
+    draw_centered_text(draw, (x0 + x1) / 2, fy + 10.5, "Europe 9 · Asia 6 · Americas 6 · Africa 5", rf, INK)
+    draw_centered_text(draw, (x0 + x1) / 2, fy + 24.5, "Middle East 4 · Oceania 3 · Global 3 (36 total)", rf, INK)
 
 
 # ---------- BAND 5B: 2-COLUMN LIGHT-IVORY WIRE (#14-#36, x=298..1012, y=682..934) ----------
@@ -800,7 +805,7 @@ def draw_date_check_and_legend(
     f_b = load_font(SANS_BOLD, 11.4)
     f_r = load_font(SANS_SEMI, 11.2)
     l1 = "Left out on purpose — Sun 22 Nov or earlier: COP31 climate talks; Dymer Kyiv strike; Manchester Co-op Live 12k evac;"
-    l2 = "Vegas F1 GP; Alcaraz ATP Finals; Liverpool 4–0 Man Utd; S. Korea minister exit; BepiColombo (21 Nov); Bank of Ghana (18 Nov); An-12 & Prague (17 Nov)."
+    l2 = "Vegas F1; Alcaraz ATP; Liverpool 4–0; S. Korea exit; BepiColombo (21 Nov); EU €7.9B (20 Nov); Bank of Ghana (18 Nov); An-12 (17 Nov)."
 
     b1 = draw_left_text(draw, x0 + 104, y0 + 14.5, l1, f_b, INK)
     b2 = draw_left_text(draw, x0 + 8, y0 + 34.5, l2, f_r, INK_DARK)
@@ -992,13 +997,13 @@ def render() -> None:
 
     # Band 4: 10 Illustrated Feature Cards (y=336..676px, 2 rows x 5 cols, 194x167px)
     features = [
-        (4, "UKRAINE AID", "OFFICIAL", REGION_COLORS["EUROPE"], "EU disburses €7.9B Ukraine Facility", "Macro-financial tranche lifts total EU budget support past €40B.", "EU Commission", art_f_ukraine),
+        (4, "CRICKET · NZ", "OFFICIAL", REGION_COLORS["OCEANIA"], "New Zealand hold India to Test draw", "Hosts bat out day 5 in Wellington after India's 720/9d to draw.", "ICC, ESPN", art_f_cricket),
         (5, "EUROPE GAS", "CONFIRMED", REGION_COLORS["EUROPE"], "European gas jumps 6% to €93/MWh", "Cold winter forecasts and Hormuz risks push Dutch TTF higher.", "FT, MUFG", art_f_gas),
-        (6, "BELGIUM", "CONFIRMED", REGION_COLORS["EUROPE"], "National strike grounds Belgian skies", "Walkout halts Belgian ATC 07–21 UTC across Brussels & Charleroi.", "AA, Al Jazeera", art_f_belgium),
-        (7, "GERMANY", "CONFIRMED", REGION_COLORS["EUROPE"], "450 German & Danish schools hit by hoaxes", "Police deem coordinated emailed bomb threats across schools unfounded.", "Police, L'Orient", art_f_schools),
+        (6, "BELGIUM", "CONFIRMED", REGION_COLORS["EUROPE"], "National strike grounds Belgian skies", "Walkout halts Belgian ATC 07:00–21:00 local (06–20 UTC).", "AA, Al Jazeera", art_f_belgium),
+        (7, "GERMANY", "CONFIRMED", REGION_COLORS["EUROPE"], "450 German schools & Danish bomb hoaxes", "Police deem emailed threats to schools & Danish sites unfounded.", "Police, DPA", art_f_schools),
         (8, "LIBYA OIL", "CONFIRMED", REGION_COLORS["AFRICA"], "Libya Sharara shut cuts 350k bpd oil", "Unauthorized valve closure halts major southwestern crude field.", "NOC, AA, Reuters", art_f_libya),
         (9, "AFRICA HEALTH", "OFFICIAL", REGION_COLORS["AFRICA"], "Africa Health Summit opens in Addis", "CPHIA launches maternal plan & eyes 60% local vaccines by 2040.", "Africa CDC", art_f_cphia),
-        (10, "US WEATHER", "CONFIRMED", REGION_COLORS["AMERICAS"], "King tides & storms hit Bay Area", "Near-record 2.8ft tides and rain trigger flood barriers at SFO.", "CNN, SFO", art_f_tides),
+        (10, "US WEATHER", "CONFIRMED", REGION_COLORS["AMERICAS"], "Bay Area braces for storms & king tides", "Forecast +2.8ft surge prompts flood barriers at SFO.", "CNN, SFO", art_f_tides),
         (11, "GUIANA SPACE", "OFFICIAL", REGION_COLORS["S_AMERICA"], "Ariane 6 VA271 halted in Kourou", "Ground-support fault pauses launch of 36 Amazon Leo satellites.", "Arianespace, CNES", art_f_ariane),
         (12, "MEDICINE", "OFFICIAL", REGION_COLORS["GLOBAL"], "Novartis heart trial meets goal", "Phase III ORION-4 readout shows Leqvio cut major cardiac events.", "Novartis", art_f_heart),
         (13, "OCEANIA", "OFFICIAL", REGION_COLORS["OCEANIA"], "USGS logs M6.5 quake in Vanuatu", "Strong deep tremor shakes South Pacific; no tsunami alert issued.", "USGS", art_f_quake),
@@ -1020,11 +1025,11 @@ def render() -> None:
         (15, "Canada", "Bombardier union votes 97.8% for strike", "AVI-GO", "OFFICIAL"),
         (16, "Colombia", "NGO warns Chocó malaria surged 46%", "STC", "REPORTED"),
         (17, "Falklands", "Groups warn oil plan threatens sea life", "Guardian", "REPORTED"),
-        (18, "UK Markets", "Compass Group plans NY primary listing", "LSE", "CONFIRMED"),
-        (19, "UK Police", "Met opens criminal probe of D. Walliams", "ITV", "CONFIRMED"),
+        (18, "UK Markets", "Compass Group plans NY primary listing", "LSE", "OFFICIAL"),
+        (19, "UK Police", "Met opens criminal probe of D. Walliams", "ITV/CNN", "CONFIRMED"),
         (20, "UK Media", "Report warns BBC fee below 50% homes", "Guardian", "REPORTED"),
         (21, "UK–EU", "Youth-mobility deal hinges on tuition", "Guardian", "REPORTED"),
-        (22, "Europe", "Living-cost rallies hit EU capitals", "Al Jazeera", "CONFIRMED"),
+        (22, "Europe", "Living-cost rallies hit EU capitals", "Al Jazeera", "REPORTED"),
         (23, "Japan", "Education Min. Seki faces exit pressure", "Xinhua", "REPORTED"),
         (24, "Singapore", "MAS & PBOC widen offshore RMB hub", "MAS", "OFFICIAL"),
         (25, "India–Nepal", "Leaders sign hydro & rail pacts", "Hindu", "OFFICIAL"),
@@ -1040,7 +1045,7 @@ def render() -> None:
         (33, "Ivory Coast", "Germany's Steinmeier opens Africa tour", "DPA", "OFFICIAL"),
         (34, "Southern Africa", "S. Africa & Zambia link customs", "SARS", "OFFICIAL"),
         (35, "Australia", "Chalmers sees <2% GDP, no recession", "Guardian", "OFFICIAL"),
-        (36, "Cricket", "New Zealand hold India to Test draw", "ICC", "OFFICIAL"),
+        (36, "Oil Markets", "Brent steadies near $91.97 amid Gulf risk", "Reuters", "REPORTED"),
     ]
     for grp in (left_wire, right_wire):
         for num, lead, body, src, _ in grp:
